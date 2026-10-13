@@ -1,0 +1,27 @@
+[project]
+name = "skillup"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "faker>=19.0",
+    "fastapi>=0.115",
+    "imbalanced-learn>=0.11",
+    "joblib>=1.3",
+    "lightgbm>=4.0",
+    "matplotlib>=3.7",
+    "numpy>=1.24",
+    "pandas>=2.0",
+    "python-dateutil>=2.9.0.post0",
+    "scikit-learn>=1.3",
+    "scipy>=1.10",
+    "seaborn>=0.12",
+    "shap>=0.46",
+    "streamlit>=1.38",
+    "uvicorn>=0.30",
+    "xgboost>=2.0",
+]
+
+[tool.pyright]
+extraPaths = ["."]

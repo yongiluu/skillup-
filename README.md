@@ -1,0 +1,411 @@
+# SkillUp - Predicción de Dotación y Riesgo de Déficit
+
+SkillUp es una plataforma de simulación, ETL, modelado, inferencia y visualización para problemas de dotación laboral. Actualmente soporta tres dominios operativos:
+
+- `industrial`: cobertura por `plant_area + shift + date`
+- `restaurant` (dominio por defecto): cobertura por `date + service_period` para un restaurante casual dining con calendario de Chile
+- `clinic`: cobertura por `date + shift + clinical_unit` para una clinica ambulatoria con agenda, procedimientos y roles criticos
+
+Cada dominio genera artefactos **SHAP** (globales y por rol crítico) para explicar predicciones de déficit, incluyendo barras de importancia global, mapas de calor por segmento, gráficos de dependencia y tablas de explicación por instancia.
+
+Además incluye un flujo documental de fichas médicas en PDF, extracción a CSV estructurado y una UI interactiva para operar pipelines y revisar dashboards.
+
+---
+
+## Inicio Rápido
+
+Forma recomendada para iniciar el proyecto:
+
+- Docker
+- Docker Compose
+- `make`
+
+Arranque:
+
+```bash
+make up
+```
+
+Ese comando sirve tambien como inicializacion de primera vez: construye la imagen y levanta la UI.
+
+La UI quedará disponible en `http://localhost:8501`.
+
+Comandos útiles:
+
+```bash
+make up-d
+make logs
+make down
+make shell
+make pipeline DOMAIN=industrial STAGE=full
+make pipeline DOMAIN=restaurant STAGE=full ARGS="--employees 72 --days 180 --seed 42"
+make pipeline DOMAIN=clinic STAGE=full ARGS="--employees 96 --days 180 --seed 42"
+```
+
+## Desarrollo Local Sin Docker
+
+Requisitos:
+
+- Python `3.13+`
+- `uv`
+
+Instalación:
+
+```bash
+uv sync
+```
+
+## Troubleshooting Docker
+
+Si `make up` falla, revisa lo siguiente:
+
+- Docker Desktop o el daemon de Docker debe estar levantado.
+- el puerto `8501` debe estar libre.
+- si cambiaste dependencias o quieres reconstruir desde cero, usa `make build` o `make restart`.
+- para inspeccionar el contenedor, usa `make logs` y `make shell`.
+
+---
+
+## Dominios Disponibles
+
+### Industrial
+
+- unidad de decisión: `Área + Turno + Día`
+- foco: disponibilidad real, fatiga colectiva, ausentismo y déficit operacional
+- salidas: métricas de modelos, predicciones, artefactos entrenados y gráficos de evaluación
+
+### Restaurant
+
+- unidad de decisión: `Fecha + Franja horaria`
+- franjas: `11_13`, `13_15`, `19_21`, `21_23`
+- foco: horas peak, fines de semana, festivos chilenos, déficit general y por rol crítico
+- salidas: predicciones operativas, recomendaciones de staffing y dashboard ejecutivo
+
+### Clinic
+
+- unidad de decisión: `Fecha + Turno + Unidad clínica`
+- turnos: `morning`, `evening`
+- unidades: `consulta_general`, `especialidades`, `procedimientos_ambulatorios`, `imagenologia`, `toma_muestras`
+- foco: agenda ambulatoria, volumen de pacientes, procedimientos, boxes activos, alertas respiratorias y déficit por roles críticos
+- salidas: predicciones operativas, recomendaciones de contingencia y dashboard ejecutivo
+
+---
+
+## Ejecución por Dominio
+
+El proyecto se opera con un selector de dominio y stages estandarizados.
+
+Comando base en local:
+
+```bash
+uv run python scripts/run_pipeline.py --domain <industrial|restaurant|clinic> --stage <generate|etl|train|infer|report|full>
+```
+
+Listar dominios en local:
+
+```bash
+uv run python scripts/run_pipeline.py --list-domains
+```
+
+Stages disponibles:
+
+- `generate`
+- `etl`
+- `train`
+- `infer`
+- `report`
+- `full`
+
+### Pipeline completo industrial
+
+Con Docker:
+
+```bash
+make pipeline DOMAIN=industrial STAGE=full
+```
+
+En local:
+
+```bash
+uv run python scripts/run_pipeline.py --domain industrial --stage full
+```
+
+Atajos equivalentes:
+
+```bash
+uv run python scripts/run_full_pipeline.py --domain industrial
+uv run python scripts/04_full_pipeline.py --domain industrial
+```
+
+### Pipeline completo restaurant
+
+Con Docker:
+
+```bash
+make pipeline DOMAIN=restaurant STAGE=full ARGS="--employees 72 --days 180 --seed 42"
+```
+
+En local:
+
+```bash
+uv run python scripts/run_pipeline.py --domain restaurant --stage full --employees 72 --days 180 --seed 42
+```
+
+### Pipeline completo clinic
+
+Con Docker:
+
+```bash
+make pipeline DOMAIN=clinic STAGE=full ARGS="--employees 96 --days 180 --seed 42"
+```
+
+En local:
+
+```bash
+uv run python scripts/run_pipeline.py --domain clinic --stage full --employees 96 --days 180 --seed 42
+```
+
+### Ejemplos por stage
+
+```bash
+uv run python scripts/run_pipeline.py --domain industrial --stage generate
+uv run python scripts/run_pipeline.py --domain industrial --stage etl
+uv run python scripts/run_pipeline.py --domain industrial --stage train
+uv run python scripts/run_pipeline.py --domain industrial --stage infer
+uv run python scripts/run_pipeline.py --domain restaurant --stage report
+uv run python scripts/run_pipeline.py --domain clinic --stage report
+```
+
+---
+
+## Qué hace cada flujo
+
+### Industrial
+
+`full` ejecuta:
+
+1. generación de `employees.csv`, `work_records.csv`, `biometrics.csv`, `absenteeism.csv`
+2. ETL y creación de `ml_features`
+3. entrenamiento de modelos de dotación y déficit
+4. inferencia sobre `ml_features`
+
+Salida principal en:
+
+- `data/raw/`
+- `data/processed/`
+- `data/skillup.db`
+
+### Restaurant
+
+`full` ejecuta:
+
+1. generación de datos en `data/restaurant/raw/`
+2. ETL y creación de `restaurant_ml_features`
+3. entrenamiento de modelos generales y por rol crítico
+4. inferencia operativa
+5. dashboard ejecutivo en `data/restaurant/processed/restaurant_executive_dashboard.png`
+
+Salida principal en:
+
+- `data/restaurant/raw/`
+- `data/restaurant/processed/`
+- `data/restaurant/restaurant_skillup.db`
+
+### Clinic
+
+`full` ejecuta:
+
+1. generación de datos en `data/clinic/raw/`
+2. ETL y creación de `clinic_ml_features`
+3. entrenamiento de modelos generales y por rol crítico
+4. inferencia operativa
+5. dashboard ejecutivo en `data/clinic/processed/clinic_executive_dashboard.png`
+
+Caso de uso modelado: clínica ambulatoria con agenda, especialidades, procedimientos menores, imagenología y toma de muestras.
+
+Salida principal en:
+
+- `data/clinic/raw/`
+- `data/clinic/processed/`
+- `data/clinic/clinic_skillup.db`
+
+---
+
+## UI Interactiva
+
+La aplicación incluye una UI con Streamlit para operar pipelines y visualizar dashboards interactivos.
+
+Lanzamiento recomendado:
+
+```bash
+make up
+```
+
+Lanzamiento local:
+
+```bash
+uv run python scripts/run_dashboard_ui.py
+```
+
+La UI permite:
+
+- seleccionar `industrial`, `restaurant` (por defecto) o `clinic`
+- ejecutar pipelines por dominio y stage
+- revisar logs de ejecución
+- visualizar KPIs y gráficos interactivos
+- consultar métricas, predicciones y artefactos por dominio
+- explorar visualizaciones **SHAP**: importancia global, mapas de calor por segmento, gráficos de dependencia y tabla de explicaciones
+- drilldown por rol crítico en restaurant (`garzón`, `cocinero_linea`, `jefe_turno`)
+- abrir una galería secundaria de imágenes estáticas generadas
+
+---
+
+## Flujo de Fichas Médicas
+
+### Generar PDFs
+
+```bash
+uv run python scripts/05_generate_medical_forms.py
+```
+
+### Extraer PDFs a CSV
+
+```bash
+uv run python scripts/06_extract_medical_forms.py
+```
+
+### Validar contra `employees.csv`
+
+```bash
+uv run python scripts/06_extract_medical_forms.py --validate-against data/raw/employees.csv
+```
+
+### Ejecutar ETL usando el CSV extraído
+
+```bash
+uv run python scripts/02_run_etl.py --employees-path data/raw/employees_from_forms.csv
+```
+
+### Flujo unificado PDF -> CSV -> ETL
+
+```bash
+uv run python scripts/07_forms_to_etl.py
+```
+
+### Flujo unificado PDF -> CSV -> ETL -> métricas del modelo
+
+```bash
+uv run python scripts/08_forms_to_model_metrics.py
+```
+
+### Inferencia con artefactos entrenados
+
+```bash
+uv run python scripts/09_run_inference.py
+```
+
+---
+
+## Artefactos Relevantes
+
+### Industrial
+
+Ubicación: `data/processed/`
+
+- `model_comparison_metrics.csv`
+- `headcount_regressor.pkl`
+- `deficit_classifier_xgboost.pkl`
+- `deficit_classifier_calibrated.pkl`
+- `model_artifacts.json`
+- `staffing_inference_predictions.csv`
+- `staffing_inference_metrics.json`
+- gráficos de evaluación (`roc`, `pr`, `calibration`, `feature_importance`, etc.)
+
+### Restaurant
+
+Ubicación: `data/restaurant/processed/`
+
+- `restaurant_ml_features.csv`
+- `restaurant_model_metrics.csv`
+- `restaurant_model_artifacts.json`
+- `restaurant_staffing_predictions.csv`
+- `restaurant_staffing_metrics.json`
+- `restaurant_executive_dashboard.png`
+- modelos por rol crítico y modelo general
+
+---
+
+## Cómo Leer la Dotación
+
+- **Dotación actual**: personal que efectivamente estuvo disponible u operando.
+- **Dotación requerida**: personal que el negocio necesita para atender la demanda sin degradar la operación.
+- **Dotación predicha**: personal que el modelo estima que estará disponible.
+
+Interpretación operativa:
+
+```text
+si dotación predicha < dotación requerida
+=> existe riesgo de déficit esperado
+```
+
+---
+
+## Documentación Técnica
+
+Consulta:
+
+- `docs/arquitectura_validada.md`
+- `docs/pipeline_actualizado.md`
+- `docs/guia_lectura_graficos_shap.md` — guía de interpretación de gráficos SHAP y glosario de factores
+- `docs/supuestos.md` / `docs/supuestos_v2.md` — supuestos del sistema, diccionarios de datos y Q&A
+- `docs/pipeline_completo_flujos.drawio` / `.svg` — diagrama de arquitectura multi-dominio
+
+El diagrama de arquitectura explica la estructura multi-dominio actual, el flujo industrial, el flujo restaurant, el flujo clínico y la UI.
+
+---
+
+## Estructura del Proyecto
+
+```text
+skillup/
+├── config/
+│   ├── settings.py
+│   └── restaurant_settings.py
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   ├── restaurant/
+│   └── skillup.db
+├── docs/
+│   ├── arquitectura_validada.md
+│   ├── pipeline_actualizado.md
+│   ├── guia_lectura_graficos_shap.md
+│   ├── supuestos.md
+│   ├── supuestos_v2.md
+│   ├── pipeline_completo_flujos.drawio
+│   └── pipeline_completo_flujos.svg
+├── scripts/
+│   ├── run_pipeline.py
+│   ├── run_full_pipeline.py
+│   ├── run_dashboard_ui.py
+│   ├── 01_generate_data.py
+│   ├── 02_run_etl.py
+│   ├── 03_train_model.py
+│   ├── 04_full_pipeline.py
+│   ├── 05_generate_medical_forms.py
+│   ├── 06_extract_medical_forms.py
+│   ├── 07_forms_to_etl.py
+│   ├── 08_forms_to_model_metrics.py
+│   └── 09_run_inference.py
+├── src/
+│   ├── domains/
+│   ├── etl/
+│   ├── extraction/
+│   ├── generators/
+│   ├── models/
+│   │   └── shap_analysis.py
+│   ├── restaurant/
+│   ├── ui/
+│   └── utils/
+└── tests/
+```

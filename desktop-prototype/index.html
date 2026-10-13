@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillUp - Desktop Dashboard</title>
+    <link rel="stylesheet" href="style.css?v=3">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-icon"><i class="fa-solid fa-chart-line"></i></div>
+            <h2>SkillUp</h2>
+        </div>
+        
+        <ul class="nav-links">
+            <li>
+                <a href="#" class="active" data-view="dashboard">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Visión General</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-view="unidades">
+                    <i class="fa-solid fa-hospital-user"></i>
+                    <span>Unidades Clínicas</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-view="personal">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Gestión de Personal</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-view="alertas">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Alertas (IA)</span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-view="config">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Configuración</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <img src="https://i.pravatar.cc/150?img=11" alt="Perfil">
+                <div class="user-info">
+                    <h4>Juan M.</h4>
+                    <p>Gerente de Turno</p>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Topbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1 id="page-title">Dashboard Operativo</h1>
+                <p class="date-subtitle">Martes, 19 de Octubre 2026</p>
+            </div>
+            <div class="topbar-right">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Buscar personal, unidades...">
+                </div>
+                <button class="btn-icon"><i class="fa-regular fa-bell"></i><span class="badge">3</span></button>
+                <button class="btn-primary"><i class="fa-solid fa-download"></i> Exportar Reporte</button>
+            </div>
+        </header>
+
+        <!-- Views Container -->
+        <div class="views-container">
+            <!-- 1. DASHBOARD VIEW -->
+            <div id="view-dashboard" class="view active">
+                
+                <!-- KPI Cards -->
+                <div class="kpi-row">
+                    <div class="kpi-card danger">
+                        <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="kpi-data">
+                            <h3>Riesgo Global de Déficit</h3>
+                            <div class="kpi-value">45.2%</div>
+                            <p class="kpi-trend bad"><i class="fa-solid fa-arrow-up"></i> +5.1% vs ayer</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card warning">
+                        <div class="kpi-icon"><i class="fa-solid fa-hospital"></i></div>
+                        <div class="kpi-data">
+                            <h3>Unidades en Alerta</h3>
+                            <div class="kpi-value">2 <span class="kpi-total">/ 5</span></div>
+                            <p class="kpi-trend">Ambulatoria, T. Muestras</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card info">
+                        <div class="kpi-icon"><i class="fa-solid fa-user-nurse"></i></div>
+                        <div class="kpi-data">
+                            <h3>Personal Disponible</h3>
+                            <div class="kpi-value">41 <span class="kpi-total">/ 45</span></div>
+                            <p class="kpi-trend good"><i class="fa-solid fa-arrow-down"></i> -2 ausencias</p>
+                        </div>
+                    </div>
+                    <div class="kpi-card success">
+                        <div class="kpi-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+                        <div class="kpi-data">
+                            <h3>Aptitud Promedio</h3>
+                            <div class="kpi-value">82<span class="kpi-total">/100</span></div>
+                            <p class="kpi-trend good"><i class="fa-solid fa-arrow-up"></i> Óptimo</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Charts Row -->
+                <div class="charts-row">
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <h3>Predicción de Demanda vs Dotación</h3>
+                            <div class="card-actions">
+                                <select class="dropdown-select"><option>Esta semana</option><option>Este mes</option></select>
+                            </div>
+                        </div>
+                        <div class="chart-container large">
+                            <canvas id="main-trend-chart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Impacto de Factores (SHAP)</h3>
+                            <i class="fa-solid fa-circle-info tooltip"></i>
+                        </div>
+                        <div class="chart-container large">
+                            <canvas id="shap-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Row -->
+                <div class="charts-row">
+                    <!-- Critical Staff Table -->
+                    <div class="chart-card flex-2">
+                        <div class="card-header">
+                            <h3>Personal Crítico (Top Riesgo)</h3>
+                            <button class="btn-text">Ver todos</button>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Profesional</th>
+                                        <th>Rol</th>
+                                        <th>Unidad Clínica</th>
+                                        <th>Aptitud (Modelo)</th>
+                                        <th>Estado</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <div class="staff-cell">
+                                                <div class="avatar">CR</div>
+                                                <div><strong>Carlos R.</strong><br><span>ID: 1042</span></div>
+                                            </div>
+                                        </td>
+                                        <td>Enfermero</td>
+                                        <td>Piso 3</td>
+                                        <td>
+                                            <div class="progress-bar-container"><div class="progress-bar danger" style="width: 45%;"></div></div>
+                                            <span class="score-text">45/100</span>
+                                        </td>
+                                        <td><span class="status-badge danger">Fatiga Alta</span></td>
+                                        <td><button class="btn-outline">Reasignar</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="staff-cell">
+                                                <div class="avatar">MP</div>
+                                                <div><strong>María P.</strong><br><span>ID: 2011</span></div>
+                                            </div>
+                                        </td>
+                                        <td>TENS</td>
+                                        <td>Ambulatoria</td>
+                                        <td>
+                                            <div class="progress-bar-container"><div class="progress-bar warning" style="width: 60%;"></div></div>
+                                            <span class="score-text">60/100</span>
+                                        </td>
+                                        <td><span class="status-badge warning">Observación</span></td>
+                                        <td><button class="btn-outline">Reasignar</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="staff-cell">
+                                                <div class="avatar">JS</div>
+                                                <div><strong>Javier S.</strong><br><span>ID: 1892</span></div>
+                                            </div>
+                                        </td>
+                                        <td>Médico General</td>
+                                        <td>Consulta Gen.</td>
+                                        <td>
+                                            <div class="progress-bar-container"><div class="progress-bar success" style="width: 88%;"></div></div>
+                                            <span class="score-text">88/100</span>
+                                        </td>
+                                        <td><span class="status-badge success">Óptimo</span></td>
+                                        <td><button class="btn-outline">Ver Perfil</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- AI Recommendations -->
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Recomendaciones IA</h3>
+                        </div>
+                        <div class="recommendations-list">
+                            <div class="recommendation-item">
+                                <div class="rec-icon danger"><i class="fa-solid fa-rotate"></i></div>
+                                <div class="rec-content">
+                                    <h4>Rotación Sugerida</h4>
+                                    <p>Rotar a Carlos R. del Piso 3 debido a fatiga acumulada predicha para mañana.</p>
+                                </div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="rec-icon warning"><i class="fa-solid fa-user-plus"></i></div>
+                                <div class="rec-content">
+                                    <h4>Refuerzo Necesario</h4>
+                                    <p>Se anticipa un déficit del 15% en Toma de Muestras entre 08:00 y 11:00.</p>
+                                </div>
+                            </div>
+                            <div class="recommendation-item">
+                                <div class="rec-icon success"><i class="fa-solid fa-check"></i></div>
+                                <div class="rec-content">
+                                    <h4>Cobertura Óptima</h4>
+                                    <p>Imagenología cuenta con cobertura adecuada para los próximos 3 días.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Simulation Row -->
+                <div class="charts-row">
+                    <div class="chart-card flex-1" style="border: 1px solid var(--info); box-shadow: 0 0 15px rgba(14, 165, 233, 0.1);">
+                        <div class="card-header" style="background: #f0f9ff; border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-bottom-color: #bae6fd;">
+                            <h3 style="color: var(--primary); display: flex; align-items: center; gap: 8px;">
+                                <div class="live-indicator"></div> Simulación de Flujo de Trabajo (Inferencia en Vivo)
+                            </h3>
+                            <span class="status-badge success" style="position: static; font-size: 11px;">Pipeline Activo</span>
+                        </div>
+                        <div class="chart-container large" style="display: flex; align-items: center; justify-content: center; background: #f8fafc; overflow: hidden; position: relative;">
+                            
+                            <!-- Node Workflow Diagram -->
+                            <div class="workflow-container">
+                                <!-- Nodes -->
+                                <div class="node node-1">
+                                    <i class="fa-solid fa-database"></i>
+                                    <span>Ingesta Clínicos</span>
+                                </div>
+                                <div class="node node-2">
+                                    <i class="fa-solid fa-filter"></i>
+                                    <span>ETL Features</span>
+                                </div>
+                                <div class="node node-3">
+                                    <i class="fa-solid fa-brain"></i>
+                                    <span>Modelo XGBoost</span>
+                                </div>
+                                <div class="node node-4">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                    <span>Alerta Déficit</span>
+                                </div>
+                                <div class="node node-5">
+                                    <i class="fa-solid fa-clipboard-user"></i>
+                                    <span>Staffing</span>
+                                </div>
+
+                                <!-- Connecting Lines (SVG) -->
+                                <svg class="workflow-lines" width="100%" height="100%">
+                                    <path id="path1" d="M 120 150 L 250 80" />
+                                    <path id="path2" d="M 250 80 L 400 150" />
+                                    <path id="path3" d="M 400 150 L 550 80" />
+                                    <path id="path4" d="M 400 150 L 550 220" />
+                                </svg>
+
+                                <!-- Moving Particles -->
+                                <div class="particle p1"></div>
+                                <div class="particle p2"></div>
+                                <div class="particle p3"></div>
+                                <div class="particle p4"></div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. UNIDADES VIEW -->
+            <div id="view-unidades" class="view" style="display: none;">
+                
+                <div class="charts-row">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Mapa de Calor: Déficit por Unidad y Turno</h3>
+                        </div>
+                        <div class="heatmap-container">
+                            <!-- Heatmap Legend -->
+                            <div class="heatmap-legend">
+                                <span>Menos Riesgo</span>
+                                <div class="gradient-bar"></div>
+                                <span>Alto Riesgo</span>
+                            </div>
+                            <!-- Simulated Heatmap Grid -->
+                            <div class="heatmap-grid" id="heatmap-grid">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Gráfico de Dependencia (Edad vs Fatiga)</h3>
+                        </div>
+                        <div class="chart-container large">
+                            <canvas id="dependency-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-card flex-1">
+                        <div class="card-header">
+                            <h3>Distribución de Roles Críticos (ROC AUC)</h3>
+                        </div>
+                        <div class="chart-container" style="min-height: 250px;">
+                            <canvas id="roles-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- 3. PERSONAL VIEW -->
+            <!-- 3. PERSONAL VIEW -->
+            <div id="view-personal" class="view" style="display: none;">
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>Directorio de Personal</h3>
+                        <div class="search-box" style="width: 250px;">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" placeholder="Buscar por nombre o ID...">
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>ID</th>
+                                    <th>Rol</th>
+                                    <th>Unidad Asignada</th>
+                                    <th>Disponibilidad</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Carlos R.</td>
+                                    <td>1042</td>
+                                    <td>Enfermero</td>
+                                    <td>Piso 3</td>
+                                    <td><span class="status-badge success">Disponible</span></td>
+                                    <td><button class="btn-outline">Ver Horario</button></td>
+                                </tr>
+                                <tr>
+                                    <td>María P.</td>
+                                    <td>2011</td>
+                                    <td>TENS</td>
+                                    <td>Ambulatoria</td>
+                                    <td><span class="status-badge success">Disponible</span></td>
+                                    <td><button class="btn-outline">Ver Horario</button></td>
+                                </tr>
+                                <tr>
+                                    <td>Luis F.</td>
+                                    <td>1923</td>
+                                    <td>Médico General</td>
+                                    <td>Urgencias</td>
+                                    <td><span class="status-badge danger">Ausente (Licencia)</span></td>
+                                    <td><button class="btn-outline">Ver Reemplazos</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. ALERTAS VIEW -->
+            <div id="view-alertas" class="view" style="display: none;">
+                <div class="chart-card">
+                    <div class="card-header">
+                        <h3>Alertas de Inteligencia Artificial (Historial)</h3>
+                    </div>
+                    <div class="recommendations-list" style="max-width: 800px; padding: 20px;">
+                        <div class="recommendation-item" style="margin-bottom: 15px;">
+                            <div class="rec-icon danger"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="rec-content">
+                                <h4>Déficit Inminente Detectado</h4>
+                                <p>Hace 1 hora • El modelo predice un déficit del 25% en la Unidad de Toma de Muestras debido a un aumento inusual de citas programadas para mañana.</p>
+                                <button class="btn-outline" style="margin-top: 10px;">Aprobar Refuerzos</button>
+                            </div>
+                        </div>
+                        <div class="recommendation-item" style="margin-bottom: 15px;">
+                            <div class="rec-icon warning"><i class="fa-solid fa-user-clock"></i></div>
+                            <div class="rec-content">
+                                <h4>Patrón de Fatiga (Grupo)</h4>
+                                <p>Hace 3 horas • 4 profesionales TENS del Piso 2 han excedido el umbral de horas extra recomendado. Sugerencia de rotación cruzada.</p>
+                                <button class="btn-outline" style="margin-top: 10px;">Ver Alternativas</button>
+                            </div>
+                        </div>
+                        <div class="recommendation-item">
+                            <div class="rec-icon info"><i class="fa-solid fa-chart-line"></i></div>
+                            <div class="rec-content">
+                                <h4>Tendencia de Ausentismo</h4>
+                                <p>Ayer • Históricamente, este fin de semana largo presenta un alza del 12% en ausencias de última hora. El modelo ha ajustado la reserva operativa.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. CONFIG VIEW -->
+            <div id="view-config" class="view" style="display: none;">
+                <div class="chart-card" style="max-width: 600px;">
+                    <div class="card-header">
+                        <h3>Parámetros del Modelo Predictivo</h3>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Umbral de Alerta de Riesgo (%)</label>
+                            <input type="range" min="0" max="100" value="70" style="width: 100%;">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #64748b;">
+                                <span>Más Sensible</span>
+                                <span>Actualmente: 70%</span>
+                                <span>Menos Sensible</span>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Notificaciones Automáticas</label>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                                <input type="checkbox" checked> Enviar alertas SMS al personal afectado
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" checked> Copiar a Jefatura Médica por email
+                            </div>
+                        </div>
+                        <button class="btn-primary">Guardar Cambios</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="app.js?v=5"></script>
+</body>
+</html>
