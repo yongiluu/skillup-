@@ -120,26 +120,25 @@
                     </div>
                 </div>
 
-                <!-- 📅 Calendario Práctico de Programación por Área -->
+                <!-- 📅 Calendario Práctico de Programación por Unidad Clínica -->
                 <div class="charts-row">
-                    <div class="chart-card flex-1 calendar-card-dark">
+                    <div class="chart-card flex-1 calendar-card-light">
                         <div class="calendar-card-header">
                             <div class="calendar-title-wrapper">
-                                <h3>📅 Calendario Práctico de Programación por Área</h3>
-                                <i class="fa-solid fa-circle-question tooltip-icon" title="Matriz de programación operativa que proyecta dotación requerida vs asignada y nivel de riesgo por turno"></i>
+                                <h3>📅 Calendario Práctico de Programación por Unidad Clínica</h3>
+                                <i class="fa-solid fa-circle-question tooltip-icon" title="Matriz de programación predictiva que proyecta dotación médica/asistencial requerida vs programada y nivel de riesgo por turno"></i>
                             </div>
                             <div class="calendar-controls">
                                 <div class="area-selector-group">
-                                    <span class="control-label">ÁREA SELECCIONADA:</span>
-                                    <select id="calendar-area-select" class="dark-dropdown">
-                                        <option value="cracking" selected>Cracking</option>
-                                        <option value="destilacion">Destilación</option>
-                                        <option value="mantenimiento">Mantenimiento</option>
-                                        <option value="almacenamiento">Almacenamiento</option>
-                                        <option value="oficinas">Oficinas</option>
-                                        <option value="all">Todas las áreas (Consolidado)</option>
-                                        <option value="urgencias">Clínica: Urgencias</option>
-                                        <option value="uci">Clínica: UCI Adulto</option>
+                                    <span class="control-label">UNIDAD CLÍNICA:</span>
+                                    <select id="calendar-area-select" class="light-dropdown">
+                                        <option value="urgencias" selected>Urgencias Ambulatoria</option>
+                                        <option value="consulta_general">Consulta General</option>
+                                        <option value="toma_muestras">Toma de Muestras</option>
+                                        <option value="procedimientos_ambulatorios">Procedimientos Ambulatorios</option>
+                                        <option value="imagenologia">Imagenología</option>
+                                        <option value="especialidades">Especialidades Médicas</option>
+                                        <option value="all">Todas las Unidades (Consolidado)</option>
                                     </select>
                                 </div>
                                 <div class="calendar-legend">
@@ -161,11 +160,11 @@
                         <!-- Recomendaciones Inteligentes de Reasignación -->
                         <div class="ai-recs-section">
                             <div class="ai-recs-title">
-                                <h4>🤖 Recomendaciones Inteligentes de Reasignación (AI Assistant)</h4>
-                                <i class="fa-solid fa-circle-question tooltip-icon" title="Sugerencias predictivas automáticas para redistribución de turnos y mitigación de fatiga"></i>
+                                <h4>🤖 Recomendaciones Inteligentes de Reasignación (AI Clinical Assistant)</h4>
+                                <i class="fa-solid fa-circle-question tooltip-icon" title="Sugerencias predictivas automáticas para redistribución de turnos clínicos y mitigación de fatiga asistencial"></i>
                             </div>
                             <div class="ai-recs-grid" id="ai-recs-cards">
-                                <!-- Poblado dinámicamente según área -->
+                                <!-- Poblado dinámicamente según unidad clínica -->
                             </div>
                         </div>
                     </div>

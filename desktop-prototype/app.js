@@ -388,7 +388,7 @@ function initExtraCharts(metrics = null) {
 }
 
 // ====================================================
-// CALENDARIO PRÁCTICO DE PROGRAMACIÓN POR ÁREA
+// CALENDARIO PRÁCTICO DE PROGRAMACIÓN POR UNIDAD CLÍNICA
 // ====================================================
 
 const CALENDAR_DAYS = [
@@ -397,12 +397,12 @@ const CALENDAR_DAYS = [
     "lun, 2 mar", "mar, 3 mar", "mié, 4 mar", "jue, 5 mar"
 ];
 
-const CALENDAR_DATA = {
-    cracking: {
-        name: "Cracking",
+const CLINICAL_CALENDAR_DATA = {
+    urgencias: {
+        name: "Urgencias Ambulatoria",
         shifts: [
             {
-                name: "Diurno",
+                name: "Turno Mañana (07:00 - 15:00)",
                 target: 12,
                 cells: [
                     { assigned: 7, risk: 94 }, { assigned: 6, risk: 94 }, { assigned: 14, risk: 18 },
@@ -413,18 +413,7 @@ const CALENDAR_DATA = {
                 ]
             },
             {
-                name: "Nocturno",
-                target: 8,
-                cells: [
-                    { assigned: 13, risk: 0 }, { assigned: 14, risk: 1 }, { assigned: 15, risk: 3 },
-                    { assigned: 15, risk: 4 }, { assigned: 11, risk: 1 }, { assigned: 14, risk: 1 },
-                    { assigned: 12, risk: 3 }, { assigned: 13, risk: 1 }, { assigned: 12, risk: 1 },
-                    { assigned: 11, risk: 3 }, { assigned: 7, risk: 16 }, { assigned: 7, risk: 25 },
-                    { assigned: 9, risk: 2 }, { assigned: 8, risk: 4 }
-                ]
-            },
-            {
-                name: "Vespertino",
+                name: "Turno Tarde (15:00 - 22:00)",
                 target: 10,
                 cells: [
                     { assigned: 14, risk: 16 }, { assigned: 15, risk: 8 }, { assigned: 8, risk: 48 },
@@ -433,207 +422,269 @@ const CALENDAR_DATA = {
                     { assigned: 14, risk: 27 }, { assigned: 14, risk: 1 }, { assigned: 14, risk: 3 },
                     { assigned: 12, risk: 10 }, { assigned: 11, risk: 14 }
                 ]
+            },
+            {
+                name: "Turno Noche / Guardia (22:00 - 07:00)",
+                target: 8,
+                cells: [
+                    { assigned: 13, risk: 0 }, { assigned: 14, risk: 1 }, { assigned: 15, risk: 3 },
+                    { assigned: 15, risk: 4 }, { assigned: 11, risk: 1 }, { assigned: 14, risk: 1 },
+                    { assigned: 12, risk: 3 }, { assigned: 13, risk: 1 }, { assigned: 12, risk: 1 },
+                    { assigned: 11, risk: 3 }, { assigned: 7, risk: 16 }, { assigned: 7, risk: 25 },
+                    { assigned: 9, risk: 2 }, { assigned: 8, risk: 4 }
+                ]
             }
         ],
         recs: [
             {
                 type: "danger",
                 icon: "fa-triangle-exclamation",
-                title: "Déficit Crítico en Turno Diurno (20 y 21 Feb)",
-                desc: "Se proyecta una brecha de 5 a 6 operadores en Cracking. Sugerencia: Reasignar 2 operadores desde Almacenamiento y 1 de Destilación."
+                title: "Déficit Crítico de Médicos de Urgencia (20 y 21 Feb)",
+                desc: "Se proyecta una brecha de 5 a 6 profesionales en Turno Mañana. Sugerencia: Activar médico de llamada de guardia y reasignar 2 TENS desde Toma de Muestras."
             },
             {
                 type: "warning",
-                icon: "fa-user-clock",
-                title: "Alerta de Fatiga en Turno Vespertino",
-                desc: "3 operadores superan el 85% de fatiga acumulada entre el 24 y 28 de Feb. Se recomienda adelantar pausas activas programadas."
+                icon: "fa-user-nurse",
+                title: "Alerta de Fatiga en Enfermería Clínica",
+                desc: "3 enfermeras superan el 85% de fatiga acumulada entre el 24 y 28 de Feb por sobreafluencia respiratoria. Se recomienda programar relevo anticipado."
             },
             {
                 type: "success",
                 icon: "fa-shield-halved",
-                title: "Superávit en Turno Nocturno",
-                desc: "Turno Nocturno con 100% de cobertura y 0-3% de riesgo promedio. Puede utilizarse como bolsa de relevo en caso de contingencia."
+                title: "Turno Noche con Cobertura Robusta",
+                desc: "Turno Nocturno con 100% de cumplimiento asistencial y bajo índice de estrés biométrico. Puede funcionar como reserva ante emergencias."
             }
         ]
     },
-    mantenimiento: {
-        name: "Mantenimiento",
+    consulta_general: {
+        name: "Consulta General",
         shifts: [
             {
-                name: "Diurno",
+                name: "Turno Mañana (08:00 - 16:00)",
+                target: 10,
+                cells: [
+                    { assigned: 11, risk: 8 }, { assigned: 10, risk: 12 }, { assigned: 10, risk: 5 },
+                    { assigned: 9, risk: 38 }, { assigned: 10, risk: 10 }, { assigned: 10, risk: 8 },
+                    { assigned: 9, risk: 42 }, { assigned: 10, risk: 15 }, { assigned: 11, risk: 5 },
+                    { assigned: 10, risk: 12 }, { assigned: 8, risk: 65 }, { assigned: 8, risk: 70 },
+                    { assigned: 10, risk: 14 }, { assigned: 10, risk: 10 }
+                ]
+            },
+            {
+                name: "Turno Tarde (14:00 - 20:00)",
                 target: 8,
                 cells: [
-                    { assigned: 14, risk: 7 }, { assigned: 13, risk: 5 }, { assigned: 5, risk: 9 },
-                    { assigned: 5, risk: 77 }, { assigned: 7, risk: 76 }, { assigned: 6, risk: 63 },
-                    { assigned: 4, risk: 76 }, { assigned: 4, risk: 85 }, { assigned: 4, risk: 85 },
-                    { assigned: 8, risk: 67 }, { assigned: 5, risk: 91 }, { assigned: 7, risk: 65 },
-                    { assigned: 8, risk: 12 }, { assigned: 9, risk: 8 }
+                    { assigned: 8, risk: 15 }, { assigned: 8, risk: 18 }, { assigned: 8, risk: 12 },
+                    { assigned: 8, risk: 10 }, { assigned: 8, risk: 14 }, { assigned: 7, risk: 55 },
+                    { assigned: 8, risk: 20 }, { assigned: 8, risk: 22 }, { assigned: 7, risk: 58 },
+                    { assigned: 8, risk: 15 }, { assigned: 7, risk: 62 }, { assigned: 8, risk: 25 },
+                    { assigned: 8, risk: 18 }, { assigned: 8, risk: 12 }
                 ]
             },
             {
-                name: "Nocturno",
+                name: "Turno Noche / Reserva",
                 target: 3,
                 cells: [
-                    { assigned: 4, risk: 0 }, { assigned: 4, risk: 12 }, { assigned: 9, risk: 0 },
-                    { assigned: 6, risk: 10 }, { assigned: 7, risk: 1 }, { assigned: 5, risk: 11 },
-                    { assigned: 6, risk: 4 }, { assigned: 5, risk: 0 }, { assigned: 5, risk: 0 },
-                    { assigned: 11, risk: 0 }, { assigned: 12, risk: 0 }, { assigned: 6, risk: 0 },
-                    { assigned: 4, risk: 0 }, { assigned: 3, risk: 0 }
+                    { assigned: 3, risk: 0 }, { assigned: 3, risk: 0 }, { assigned: 3, risk: 0 },
+                    { assigned: 3, risk: 0 }, { assigned: 4, risk: 0 }, { assigned: 3, risk: 0 },
+                    { assigned: 3, risk: 0 }, { assigned: 3, risk: 0 }, { assigned: 3, risk: 0 },
+                    { assigned: 3, risk: 0 }, { assigned: 3, risk: 5 }, { assigned: 3, risk: 8 },
+                    { assigned: 3, risk: 0 }, { assigned: 3, risk: 0 }
+                ]
+            }
+        ],
+        recs: [
+            {
+                type: "warning",
+                icon: "fa-stethoscope",
+                title: "Alta Demanda Pediátrica el 2 y 3 de Marzo",
+                desc: "Déficit previsto de 2 médicos de familia por concentración de consultas matutinas. Recomendar apoyo de médicos generales de Procedimientos."
+            },
+            {
+                type: "success",
+                icon: "fa-circle-check",
+                title: "Cobertura Médica Estable en Tarde",
+                desc: "La rotación de consultas especializadas mantiene niveles de estrés y fatiga inferiores al 20%."
+            }
+        ]
+    },
+    toma_muestras: {
+        name: "Toma de Muestras",
+        shifts: [
+            {
+                name: "Turno Mañana (Pico 07:00 - 12:00)",
+                target: 8,
+                cells: [
+                    { assigned: 10, risk: 10 }, { assigned: 9, risk: 12 }, { assigned: 6, risk: 68 },
+                    { assigned: 5, risk: 82 }, { assigned: 5, risk: 88 }, { assigned: 6, risk: 65 },
+                    { assigned: 5, risk: 85 }, { assigned: 8, risk: 20 }, { assigned: 8, risk: 15 },
+                    { assigned: 8, risk: 12 }, { assigned: 6, risk: 72 }, { assigned: 5, risk: 90 },
+                    { assigned: 8, risk: 18 }, { assigned: 9, risk: 10 }
                 ]
             },
             {
-                name: "Vespertino",
-                target: 6,
+                name: "Turno Tarde (12:00 - 18:00)",
+                target: 4,
                 cells: [
-                    { assigned: 5, risk: 60 }, { assigned: 5, risk: 65 }, { assigned: 10, risk: 11 },
-                    { assigned: 13, risk: 2 }, { assigned: 13, risk: 0 }, { assigned: 10, risk: 12 },
-                    { assigned: 8, risk: 31 }, { assigned: 12, risk: 7 }, { assigned: 12, risk: 7 },
-                    { assigned: 7, risk: 9 }, { assigned: 5, risk: 60 }, { assigned: 6, risk: 55 },
-                    { assigned: 6, risk: 15 }, { assigned: 7, risk: 8 }
+                    { assigned: 5, risk: 5 }, { assigned: 4, risk: 10 }, { assigned: 4, risk: 12 },
+                    { assigned: 4, risk: 8 }, { assigned: 5, risk: 0 }, { assigned: 4, risk: 10 },
+                    { assigned: 4, risk: 12 }, { assigned: 4, risk: 15 }, { assigned: 4, risk: 8 },
+                    { assigned: 4, risk: 10 }, { assigned: 3, risk: 55 }, { assigned: 3, risk: 60 },
+                    { assigned: 4, risk: 12 }, { assigned: 4, risk: 8 }
+                ]
+            },
+            {
+                name: "Turno Noche / Urgencia Lab",
+                target: 2,
+                cells: [
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }
                 ]
             }
         ],
         recs: [
             {
                 type: "danger",
-                icon: "fa-wrench",
-                title: "Déficit Prolongado de Técnicos Mecánicos",
-                desc: "Turno diurno entre el 26 de feb y 2 de mar cuenta con solo 4 de 8 técnicos necesarios. Se requiere activar cuadrilla externa."
-            },
-            {
-                type: "warning",
-                icon: "fa-bell",
-                title: "Sobrecarga en Mantenimiento Preventivo",
-                desc: "El riesgo de fatiga aumenta al 91% el 2 de marzo por acumulación de paradas de planta. Coordinar rotaciones previas."
+                icon: "fa-vial",
+                title: "Déficit en Pico Matutino de Flebotomía",
+                desc: "Faltan 3 TENS el 23-25 de Feb para atender la alta afluencia de exámenes en ayunas. Riesgo de retraso en entrega de resultados críticos."
             },
             {
                 type: "success",
-                icon: "fa-circle-check",
-                title: "Nocturno Estable para Mantenimiento",
-                desc: "Cobertura óptima constante con dotación superior al mínimo requerido de 3 técnicos."
+                icon: "fa-check-double",
+                title: "Laboratorio Nocturno en Meta",
+                desc: "Procesamiento de muestras de urgencia cubierto al 100% sin incidencias proyectadas."
             }
         ]
     },
-    destilacion: {
-        name: "Destilación",
+    procedimientos_ambulatorios: {
+        name: "Procedimientos Ambulatorios",
         shifts: [
             {
-                name: "Diurno",
-                target: 10,
-                cells: [
-                    { assigned: 17, risk: 0 }, { assigned: 11, risk: 0 }, { assigned: 11, risk: 0 },
-                    { assigned: 11, risk: 7 }, { assigned: 13, risk: 11 }, { assigned: 13, risk: 9 },
-                    { assigned: 12, risk: 3 }, { assigned: 12, risk: 18 }, { assigned: 11, risk: 5 },
-                    { assigned: 12, risk: 2 }, { assigned: 11, risk: 1 }, { assigned: 11, risk: 0 },
-                    { assigned: 10, risk: 0 }, { assigned: 10, risk: 5 }
-                ]
-            },
-            {
-                name: "Nocturno",
-                target: 6,
-                cells: [
-                    { assigned: 11, risk: 0 }, { assigned: 12, risk: 0 }, { assigned: 12, risk: 0 },
-                    { assigned: 12, risk: 0 }, { assigned: 14, risk: 0 }, { assigned: 13, risk: 0 },
-                    { assigned: 15, risk: 0 }, { assigned: 15, risk: 0 }, { assigned: 15, risk: 0 },
-                    { assigned: 14, risk: 0 }, { assigned: 14, risk: 0 }, { assigned: 10, risk: 0 },
-                    { assigned: 8, risk: 0 }, { assigned: 7, risk: 0 }
-                ]
-            },
-            {
-                name: "Vespertino",
+                name: "Turno Mañana (08:00 - 16:00)",
                 target: 8,
                 cells: [
-                    { assigned: 15, risk: 0 }, { assigned: 14, risk: 0 }, { assigned: 13, risk: 0 },
-                    { assigned: 13, risk: 0 }, { assigned: 14, risk: 0 }, { assigned: 14, risk: 1 },
-                    { assigned: 15, risk: 0 }, { assigned: 15, risk: 0 }, { assigned: 17, risk: 0 },
-                    { assigned: 10, risk: 3 }, { assigned: 10, risk: 33 }, { assigned: 8, risk: 2 },
-                    { assigned: 8, risk: 4 }, { assigned: 9, risk: 1 }
+                    { assigned: 8, risk: 12 }, { assigned: 8, risk: 10 }, { assigned: 7, risk: 42 },
+                    { assigned: 8, risk: 15 }, { assigned: 8, risk: 18 }, { assigned: 7, risk: 45 },
+                    { assigned: 8, risk: 12 }, { assigned: 8, risk: 10 }, { assigned: 8, risk: 14 },
+                    { assigned: 8, risk: 8 }, { assigned: 7, risk: 52 }, { assigned: 7, risk: 58 },
+                    { assigned: 8, risk: 16 }, { assigned: 8, risk: 12 }
+                ]
+            },
+            {
+                name: "Turno Tarde (14:00 - 21:00)",
+                target: 6,
+                cells: [
+                    { assigned: 6, risk: 10 }, { assigned: 6, risk: 14 }, { assigned: 6, risk: 12 },
+                    { assigned: 6, risk: 15 }, { assigned: 6, risk: 10 }, { assigned: 5, risk: 58 },
+                    { assigned: 6, risk: 18 }, { assigned: 6, risk: 12 }, { assigned: 5, risk: 62 },
+                    { assigned: 6, risk: 15 }, { assigned: 6, risk: 18 }, { assigned: 6, risk: 20 },
+                    { assigned: 6, risk: 14 }, { assigned: 6, risk: 10 }
+                ]
+            },
+            {
+                name: "Turno Noche / Esterilización",
+                target: 2,
+                cells: [
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }
                 ]
             }
         ],
         recs: [
+            {
+                type: "warning",
+                icon: "fa-syringe",
+                title: "Refuerzo en Pabellón Menor",
+                desc: "Se proyecta aumento de biopsias y cirugías ambulatorias el 25 y 27 de feb. Reasignar 1 enfermera quirúrgica de apoyo."
+            },
             {
                 type: "success",
                 icon: "fa-circle-check",
-                title: "Área con Cobertura Altamente Robusta",
-                desc: "Destilación presenta una dotación superior a los 10/8/6 requeridos con riesgo promedio inferior al 5%."
-            },
-            {
-                type: "warning",
-                icon: "fa-shuffle",
-                title: "Candidata Ideal para Reasignaciones",
-                desc: "Cuenta con hasta 4 operadores excedentes en turno diurno que pueden apoyar a Cracking sin arriesgar la operación."
+                title: "Esterilización y Desinfección OK",
+                desc: "Equipos de apoyo nocturno con cobertura total y cumplimiento de protocolos de asepsia."
             }
         ]
     },
-    almacenamiento: {
-        name: "Almacenamiento",
+    imagenologia: {
+        name: "Imagenología (Rayos X / TAC)",
         shifts: [
             {
-                name: "Diurno",
+                name: "Turno Mañana (08:00 - 16:00)",
                 target: 6,
                 cells: [
-                    { assigned: 8, risk: 12 }, { assigned: 8, risk: 10 }, { assigned: 7, risk: 5 },
-                    { assigned: 6, risk: 15 }, { assigned: 6, risk: 8 }, { assigned: 6, risk: 10 },
-                    { assigned: 7, risk: 14 }, { assigned: 7, risk: 12 }, { assigned: 6, risk: 15 },
-                    { assigned: 6, risk: 10 }, { assigned: 5, risk: 45 }, { assigned: 5, risk: 52 },
-                    { assigned: 6, risk: 10 }, { assigned: 6, risk: 12 }
+                    { assigned: 7, risk: 5 }, { assigned: 6, risk: 10 }, { assigned: 6, risk: 8 },
+                    { assigned: 6, risk: 12 }, { assigned: 6, risk: 9 }, { assigned: 6, risk: 10 },
+                    { assigned: 6, risk: 14 }, { assigned: 6, risk: 8 }, { assigned: 6, risk: 10 },
+                    { assigned: 6, risk: 5 }, { assigned: 5, risk: 48 }, { assigned: 5, risk: 52 },
+                    { assigned: 6, risk: 12 }, { assigned: 6, risk: 8 }
                 ]
             },
             {
-                name: "Nocturno",
-                target: 2,
-                cells: [
-                    { assigned: 3, risk: 0 }, { assigned: 3, risk: 0 }, { assigned: 2, risk: 0 },
-                    { assigned: 2, risk: 2 }, { assigned: 3, risk: 0 }, { assigned: 2, risk: 0 },
-                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 3, risk: 0 },
-                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 5 }, { assigned: 2, risk: 5 },
-                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }
-                ]
-            },
-            {
-                name: "Vespertino",
+                name: "Turno Tarde (14:00 - 21:00)",
                 target: 4,
                 cells: [
-                    { assigned: 5, risk: 8 }, { assigned: 5, risk: 12 }, { assigned: 4, risk: 15 },
-                    { assigned: 4, risk: 20 }, { assigned: 4, risk: 10 }, { assigned: 4, risk: 15 },
-                    { assigned: 5, risk: 10 }, { assigned: 4, risk: 18 }, { assigned: 4, risk: 12 },
-                    { assigned: 4, risk: 10 }, { assigned: 3, risk: 55 }, { assigned: 3, risk: 62 },
-                    { assigned: 4, risk: 15 }, { assigned: 4, risk: 10 }
+                    { assigned: 4, risk: 12 }, { assigned: 4, risk: 10 }, { assigned: 4, risk: 15 },
+                    { assigned: 4, risk: 14 }, { assigned: 4, risk: 8 }, { assigned: 4, risk: 12 },
+                    { assigned: 4, risk: 10 }, { assigned: 4, risk: 15 }, { assigned: 4, risk: 12 },
+                    { assigned: 4, risk: 10 }, { assigned: 3, risk: 55 }, { assigned: 4, risk: 20 },
+                    { assigned: 4, risk: 12 }, { assigned: 4, risk: 10 }
+                ]
+            },
+            {
+                name: "Turno Noche / Guardia TAC",
+                target: 2,
+                cells: [
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 },
+                    { assigned: 2, risk: 0 }, { assigned: 2, risk: 0 }
                 ]
             }
         ],
         recs: [
             {
-                type: "warning",
-                icon: "fa-boxes-stacked",
-                title: "Déficit Moderado el 2 y 3 de Marzo",
-                desc: "El turno vespertino cae a 3 de 4 requeridos debido a descanso compensatorio programado."
-            },
-            {
                 type: "success",
-                icon: "fa-check",
-                title: "Turno Nocturno en Regla",
-                desc: "Cumplimiento al 100% de la dotación mínima de 2 operadores requeridos."
+                icon: "fa-x-ray",
+                title: "Disponibilidad Óptima de Tecnólogos Médicos",
+                desc: "Cobertura de resonancia y tomografía en metas operativas sin reportes de fatiga elevada."
             }
         ]
     },
-    oficinas: {
-        name: "Oficinas",
+    especialidades: {
+        name: "Especialidades Médicas",
         shifts: [
             {
-                name: "Diurno",
-                target: 5,
+                name: "Turno Mañana (08:30 - 14:30)",
+                target: 8,
                 cells: [
-                    { assigned: 6, risk: 2 }, { assigned: 6, risk: 2 }, { assigned: 5, risk: 0 },
-                    { assigned: 5, risk: 4 }, { assigned: 5, risk: 3 }, { assigned: 5, risk: 2 },
-                    { assigned: 5, risk: 2 }, { assigned: 5, risk: 5 }, { assigned: 5, risk: 2 },
-                    { assigned: 5, risk: 0 }, { assigned: 5, risk: 2 }, { assigned: 5, risk: 5 },
-                    { assigned: 5, risk: 2 }, { assigned: 5, risk: 0 }
+                    { assigned: 8, risk: 15 }, { assigned: 8, risk: 18 }, { assigned: 8, risk: 12 },
+                    { assigned: 8, risk: 20 }, { assigned: 8, risk: 15 }, { assigned: 8, risk: 18 },
+                    { assigned: 8, risk: 12 }, { assigned: 7, risk: 55 }, { assigned: 8, risk: 20 },
+                    { assigned: 8, risk: 14 }, { assigned: 7, risk: 58 }, { assigned: 8, risk: 22 },
+                    { assigned: 8, risk: 15 }, { assigned: 8, risk: 10 }
                 ]
             },
             {
-                name: "Vespertino",
+                name: "Turno Tarde (14:30 - 19:30)",
+                target: 6,
+                cells: [
+                    { assigned: 6, risk: 10 }, { assigned: 6, risk: 12 }, { assigned: 6, risk: 10 },
+                    { assigned: 6, risk: 15 }, { assigned: 6, risk: 12 }, { assigned: 6, risk: 18 },
+                    { assigned: 6, risk: 10 }, { assigned: 5, risk: 52 }, { assigned: 6, risk: 15 },
+                    { assigned: 6, risk: 12 }, { assigned: 5, risk: 55 }, { assigned: 6, risk: 18 },
+                    { assigned: 6, risk: 12 }, { assigned: 6, risk: 10 }
+                ]
+            },
+            {
+                name: "Turno Noche / Guardia Pasiva",
                 target: 1,
                 cells: [
                     { assigned: 1, risk: 0 }, { assigned: 1, risk: 0 }, { assigned: 1, risk: 0 },
@@ -646,108 +697,10 @@ const CALENDAR_DATA = {
         ],
         recs: [
             {
-                type: "success",
-                icon: "fa-building",
-                title: "Área Administrativa Estable",
-                desc: "Sin registros de fatiga ni ausentismo crítico proyectado."
-            }
-        ]
-    },
-    urgencias: {
-        name: "Urgencias (Clínica)",
-        shifts: [
-            {
-                name: "Diurno",
-                target: 10,
-                cells: [
-                    { assigned: 8, risk: 78 }, { assigned: 7, risk: 85 }, { assigned: 11, risk: 15 },
-                    { assigned: 10, risk: 20 }, { assigned: 10, risk: 10 }, { assigned: 9, risk: 45 },
-                    { assigned: 10, risk: 25 }, { assigned: 8, risk: 72 }, { assigned: 7, risk: 89 },
-                    { assigned: 11, risk: 12 }, { assigned: 10, risk: 18 }, { assigned: 8, risk: 75 },
-                    { assigned: 10, risk: 22 }, { assigned: 10, risk: 15 }
-                ]
-            },
-            {
-                name: "Nocturno",
-                target: 8,
-                cells: [
-                    { assigned: 8, risk: 25 }, { assigned: 8, risk: 30 }, { assigned: 9, risk: 10 },
-                    { assigned: 8, risk: 15 }, { assigned: 8, risk: 20 }, { assigned: 7, risk: 65 },
-                    { assigned: 8, risk: 25 }, { assigned: 8, risk: 28 }, { assigned: 7, risk: 60 },
-                    { assigned: 9, risk: 12 }, { assigned: 8, risk: 15 }, { assigned: 8, risk: 32 },
-                    { assigned: 8, risk: 18 }, { assigned: 8, risk: 20 }
-                ]
-            },
-            {
-                name: "Vespertino",
-                target: 9,
-                cells: [
-                    { assigned: 9, risk: 35 }, { assigned: 8, risk: 55 }, { assigned: 9, risk: 20 },
-                    { assigned: 9, risk: 15 }, { assigned: 10, risk: 12 }, { assigned: 9, risk: 25 },
-                    { assigned: 9, risk: 30 }, { assigned: 8, risk: 62 }, { assigned: 8, risk: 58 },
-                    { assigned: 10, risk: 10 }, { assigned: 9, risk: 20 }, { assigned: 8, risk: 55 },
-                    { assigned: 9, risk: 18 }, { assigned: 9, risk: 25 }
-                ]
-            }
-        ],
-        recs: [
-            {
-                type: "danger",
-                icon: "fa-kit-medical",
-                title: "Déficit de Médicos de Urgencia en Fin de Semana",
-                desc: "Dotación diurna cae a 7/10 con riesgo del 85-89%. Se sugiere activar turnos de llamada para Médicos de Urgencia."
-            },
-            {
                 type: "warning",
-                icon: "fa-user-nurse",
-                title: "Fatiga Acumulada en Personal TENS",
-                desc: "3 profesionales TENS registran turnos dobles. Rotar con personal de Consulta General."
-            }
-        ]
-    },
-    uci: {
-        name: "UCI Adulto (Clínica)",
-        shifts: [
-            {
-                name: "Diurno",
-                target: 8,
-                cells: [
-                    { assigned: 8, risk: 15 }, { assigned: 8, risk: 20 }, { assigned: 8, risk: 18 },
-                    { assigned: 7, risk: 68 }, { assigned: 8, risk: 22 }, { assigned: 8, risk: 15 },
-                    { assigned: 8, risk: 12 }, { assigned: 7, risk: 71 }, { assigned: 8, risk: 25 },
-                    { assigned: 8, risk: 18 }, { assigned: 8, risk: 15 }, { assigned: 7, risk: 65 },
-                    { assigned: 8, risk: 20 }, { assigned: 8, risk: 14 }
-                ]
-            },
-            {
-                name: "Nocturno",
-                target: 6,
-                cells: [
-                    { assigned: 6, risk: 20 }, { assigned: 6, risk: 15 }, { assigned: 6, risk: 25 },
-                    { assigned: 6, risk: 18 }, { assigned: 6, risk: 20 }, { assigned: 6, risk: 30 },
-                    { assigned: 6, risk: 22 }, { assigned: 6, risk: 15 }, { assigned: 6, risk: 18 },
-                    { assigned: 6, risk: 20 }, { assigned: 6, risk: 15 }, { assigned: 6, risk: 25 },
-                    { assigned: 6, risk: 20 }, { assigned: 6, risk: 18 }
-                ]
-            },
-            {
-                name: "Vespertino",
-                target: 7,
-                cells: [
-                    { assigned: 7, risk: 22 }, { assigned: 7, risk: 18 }, { assigned: 7, risk: 25 },
-                    { assigned: 7, risk: 20 }, { assigned: 7, risk: 15 }, { assigned: 7, risk: 28 },
-                    { assigned: 7, risk: 18 }, { assigned: 6, risk: 62 }, { assigned: 7, risk: 20 },
-                    { assigned: 7, risk: 15 }, { assigned: 7, risk: 18 }, { assigned: 7, risk: 22 },
-                    { assigned: 7, risk: 15 }, { assigned: 7, risk: 20 }
-                ]
-            }
-        ],
-        recs: [
-            {
-                type: "warning",
-                icon: "fa-heart-pulse",
-                title: "Déficit Puntual de Enfermeras Especialistas",
-                desc: "Turnos diurnos del 23 y 27 de feb requieren refuerzo de 1 enfermera especialista en paciente crítico."
+                icon: "fa-user-doctor",
+                title: "Alta Demanda en Cardiología y Traumatología",
+                desc: "Sobrecarga moderada los días viernes por citas de control post-quirúrgico."
             }
         ]
     }
@@ -770,7 +723,7 @@ function renderCalendar(selectedArea) {
     if (!table) return;
 
     // Header row
-    let headerHtml = `<thead><tr><th class="col-area">Área / Turno</th>`;
+    let headerHtml = `<thead><tr><th class="col-area">Unidad / Turno</th>`;
     CALENDAR_DAYS.forEach(day => {
         headerHtml += `<th>${day}</th>`;
     });
@@ -780,16 +733,16 @@ function renderCalendar(selectedArea) {
     let bodyHtml = `<tbody>`;
 
     if (selectedArea === 'all') {
-        // Consolidated: Show Diurno row for each area
-        Object.keys(CALENDAR_DATA).forEach(key => {
-            const area = CALENDAR_DATA[key];
-            const shift = area.shifts[0]; // Diurno
-            bodyHtml += buildShiftRow(key, area.name, shift);
+        // Consolidated: Show morning shift for each clinical unit
+        Object.keys(CLINICAL_CALENDAR_DATA).forEach(key => {
+            const unit = CLINICAL_CALENDAR_DATA[key];
+            const shift = unit.shifts[0]; // Mañana
+            bodyHtml += buildShiftRow(key, unit.name, shift);
         });
     } else {
-        const area = CALENDAR_DATA[selectedArea] || CALENDAR_DATA.cracking;
-        area.shifts.forEach(shift => {
-            bodyHtml += buildShiftRow(selectedArea, area.name, shift);
+        const unit = CLINICAL_CALENDAR_DATA[selectedArea] || CLINICAL_CALENDAR_DATA.urgencias;
+        unit.shifts.forEach(shift => {
+            bodyHtml += buildShiftRow(selectedArea, unit.name, shift);
         });
     }
 
@@ -798,8 +751,8 @@ function renderCalendar(selectedArea) {
 
     // Render AI recommendations
     if (recsContainer) {
-        const area = CALENDAR_DATA[selectedArea] || CALENDAR_DATA.cracking;
-        const recs = area.recs || CALENDAR_DATA.cracking.recs;
+        const unit = CLINICAL_CALENDAR_DATA[selectedArea] || CLINICAL_CALENDAR_DATA.urgencias;
+        const recs = unit.recs || CLINICAL_CALENDAR_DATA.urgencias.recs;
         recsContainer.innerHTML = recs.map(r => `
             <div class="ai-rec-card ${r.type}">
                 <div class="ai-rec-icon"><i class="fa-solid ${r.icon}"></i></div>
@@ -812,11 +765,11 @@ function renderCalendar(selectedArea) {
     }
 }
 
-function buildShiftRow(areaKey, areaName, shift) {
+function buildShiftRow(unitKey, unitName, shift) {
     let row = `<tr>`;
     row += `
         <td class="row-label">
-            <span class="row-area-name">${areaName}</span>
+            <span class="row-area-name">${unitName}</span>
             <span class="row-shift-name">${shift.name}</span>
         </td>
     `;
@@ -828,7 +781,7 @@ function buildShiftRow(areaKey, areaName, shift) {
 
         row += `
             <td>
-                <div class="shift-cell ${statusClass}" onclick="openShiftModal('${areaKey}', '${shift.name}', ${dayIdx}, '${CALENDAR_DAYS[dayIdx]}')">
+                <div class="shift-cell ${statusClass}" onclick="openShiftModal('${unitKey}', '${shift.name}', ${dayIdx}, '${CALENDAR_DAYS[dayIdx]}')">
                     <div class="shift-stat">
                         <span class="cell-dot"></span>
                         <span>${cell.assigned}/${shift.target}</span>
@@ -843,41 +796,40 @@ function buildShiftRow(areaKey, areaName, shift) {
     return row;
 }
 
-// Modal Interaction
-const WORKER_NAMES = [
-    { name: "Juan Morales", role: "Operador de Campo", id: "1042" },
-    { name: "Carlos Gómez", role: "Operador de Panel", id: "1105" },
-    { name: "Esteban Valdés", role: "Técnico Mecánico", id: "1088" },
-    { name: "Rodrigo Parra", role: "Supervisor de Turno", id: "1012" },
-    { name: "María Pinto", role: "Operador de Campo", id: "1150" },
-    { name: "Diego Muñoz", role: "Ingeniero de Procesos", id: "1025" },
-    { name: "Javier Soto", role: "Operador Panelista", id: "1190" },
-    { name: "Alejandro C.", role: "Técnico de Apoyo", id: "1230" },
-    { name: "Patricia R.", role: "Operador Planta", id: "1114" }
+// Modal Interaction con Profesionales de Salud
+const CLINICAL_WORKERS = [
+    { name: "Dr. Carlos Rivas", role: "Médico de Urgencias", id: "MED-1042" },
+    { name: "Enf. María Paz Lagos", role: "Enfermera Clínica", id: "ENF-2011" },
+    { name: "TENS Javier Soto", role: "Técnico en Enfermería", id: "TEN-3015" },
+    { name: "Dra. Sofía Mendoza", role: "Médico General", id: "MED-1088" },
+    { name: "Enf. Rodrigo Parra", role: "Coordinador de Turno", id: "ENF-2045" },
+    { name: "TENS Camila Torres", role: "Técnico en Enfermería", id: "TEN-3022" },
+    { name: "T.M. Alejandro Castro", role: "Tecnólogo Médico", id: "TEC-4012" },
+    { name: "Enf. Valentina Rojas", role: "Enfermera de Procedimientos", id: "ENF-2090" }
 ];
 
-function openShiftModal(areaKey, shiftName, dayIdx, dayLabel) {
-    const area = CALENDAR_DATA[areaKey] || CALENDAR_DATA.cracking;
-    const shift = area.shifts.find(s => s.name === shiftName) || area.shifts[0];
+function openShiftModal(unitKey, shiftName, dayIdx, dayLabel) {
+    const unit = CLINICAL_CALENDAR_DATA[unitKey] || CLINICAL_CALENDAR_DATA.urgencias;
+    const shift = unit.shifts.find(s => s.name === shiftName) || unit.shifts[0];
     const cell = shift.cells[dayIdx];
 
     const isCritical = cell.risk >= 70 || cell.assigned < shift.target * 0.75;
     const isWarning = (cell.risk >= 40 && cell.risk < 70) || (cell.assigned < shift.target && cell.assigned >= shift.target * 0.75);
     const statusClass = isCritical ? 'danger' : (isWarning ? 'warning' : 'ok');
 
-    document.getElementById('modal-shift-title').innerText = `${area.name} - Turno ${shift.name}`;
-    document.getElementById('modal-shift-subtitle').innerText = `${dayLabel} • Cobertura: ${cell.assigned}/${shift.target} trabajadores`;
+    document.getElementById('modal-shift-title').innerText = `${unit.name} - ${shift.name}`;
+    document.getElementById('modal-shift-subtitle').innerText = `${dayLabel} • Dotación Asignada: ${cell.assigned}/${shift.target} profesionales de salud`;
 
     const banner = document.getElementById('modal-alert-banner');
     banner.className = `shift-alert-banner ${statusClass}`;
     
     const bannerText = document.getElementById('modal-alert-text');
     if (isCritical) {
-        bannerText.innerHTML = `<strong>⚠️ Déficit Crítico (${cell.risk}% Riesgo de Fatiga):</strong> Faltan ${Math.max(1, shift.target - cell.assigned)} trabajadores para cumplir la dotación mínima de seguridad (${shift.target} requeridos).`;
+        bannerText.innerHTML = `<strong>⚠️ Déficit Crítico (${cell.risk}% Riesgo de Fatiga Asistencial):</strong> Faltan ${Math.max(1, shift.target - cell.assigned)} profesionales de salud para asegurar la ratio clínica segura (${shift.target} requeridos).`;
     } else if (isWarning) {
-        bannerText.innerHTML = `<strong>⚠️ Alerta Moderada (${cell.risk}% Riesgo):</strong> Cobertura justa (${cell.assigned}/${shift.target}). 2 trabajadores presentan signos tempranos de fatiga acumulada.`;
+        bannerText.innerHTML = `<strong>⚠️ Alerta Moderada (${cell.risk}% Riesgo):</strong> Cobertura al límite (${cell.assigned}/${shift.target}). El personal de enfermería presenta acumulación de turnos extendidos.`;
     } else {
-        bannerText.innerHTML = `<strong>✅ Cobertura Óptima (${cell.risk}% Riesgo):</strong> La dotación asignada (${cell.assigned}/${shift.target}) cumple satisfactoriamente con la demanda operativa esperada.`;
+        bannerText.innerHTML = `<strong>✅ Cobertura Asistencial Óptima (${cell.risk}% Riesgo):</strong> La dotación asignada (${cell.assigned}/${shift.target}) satisface completamente la demanda clínica proyectada.`;
     }
 
     // Workers list
@@ -886,16 +838,16 @@ function openShiftModal(areaKey, shiftName, dayIdx, dayLabel) {
 
     const count = Math.min(cell.assigned, 5);
     for (let i = 0; i < count; i++) {
-        const w = WORKER_NAMES[i % WORKER_NAMES.length];
+        const w = CLINICAL_WORKERS[i % CLINICAL_WORKERS.length];
         let wFatigue = cell.risk;
         if (i === 1) wFatigue = Math.max(10, cell.risk - 15);
         if (i > 1) wFatigue = Math.max(5, cell.risk - 30 - (i * 8));
 
         const wStatus = wFatigue >= 70 ? 'danger' : (wFatigue >= 40 ? 'warning' : 'success');
-        const wStatusText = wFatigue >= 70 ? 'Fatiga Crítica' : (wFatigue >= 40 ? 'Alerta Media' : 'Óptimo');
+        const wStatusText = wFatigue >= 70 ? 'Fatiga Severa' : (wFatigue >= 40 ? 'Alerta Media' : 'Óptimo');
         const reasonText = wFatigue >= 70 
-            ? '14 hrs acumuladas en últimas 24h • Horas extra continuas' 
-            : (wFatigue >= 40 ? 'Variabilidad de descanso moderada' : 'Parámetros biométricos y sueño dentro de rango');
+            ? '16 hrs continuas de guardia sin descanso legal • Sobrecarga asistencial' 
+            : (wFatigue >= 40 ? 'Variabilidad cardíaca baja tras atención de alta agudeza' : 'Descanso legal cumplido (sueño profundo > 25%, estrés bajo)');
 
         workersHtml += `
             <div class="modal-worker-card">
@@ -919,9 +871,9 @@ function openShiftModal(areaKey, shiftName, dayIdx, dayLabel) {
     // AI recommendation text
     const aiText = document.getElementById('modal-ai-action-text');
     if (isCritical) {
-        aiText.innerText = `Reasignar 2 operadores disponibles desde Almacenamiento (cobertura disponible al 100%) y activar personal de guardia para mitigar el déficit en ${area.name}.`;
+        aiText.innerText = `Reasignar 2 TENS desde Toma de Muestras (disponibilidad al 100%) y activar médico de llamada para cubrir el déficit en ${unit.name}.`;
     } else if (isWarning) {
-        aiText.innerText = `Monitorear descanso de ${WORKER_NAMES[0].name} y programar rotación preventiva con relevo de turno.`;
+        aiText.innerText = `Monitorear descanso de ${CLINICAL_WORKERS[0].name} y coordinar relevo preventivo con el equipo de la tarde.`;
     } else {
         aiText.innerText = `Mantener programación establecida. No se requieren acciones correctivas en este turno.`;
     }
@@ -935,7 +887,8 @@ function closeShiftModal() {
 }
 
 function applyReassignment() {
-    alert("✅ Reasignación ejecutada exitosamente por SkillUp AI Assistant.\nSe notificó a los supervisores de turno y se actualizó la dotación.");
+    alert("✅ Reasignación clínica ejecutada exitosamente por SkillUp AI Assistant.\nSe notificó a Coordinación Médica y se actualizó la dotación en vivo.");
     closeShiftModal();
 }
+
 
