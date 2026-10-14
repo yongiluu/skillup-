@@ -156,6 +156,38 @@ def list_artifacts(folder: Path, label: str) -> list[dict[str, str]]:
     return records
 
 
+def run_pipeline_streaming(domain: str, stage: str, employees: int, days: int, seed: int):
+    command = [
+        sys.executable,
+        "-u",
+        str(RUNNER_SCRIPT),
+        "--domain",
+        domain,
+        "--stage",
+        stage,
+        "--employees",
+        str(employees),
+        "--days",
+        str(days),
+        "--seed",
+        str(seed),
+    ]
+    process = subprocess.Popen(
+        command,
+        cwd=str(PROJECT_ROOT),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        universal_newlines=True,
+    )
+    if process.stdout:
+        for line in iter(process.stdout.readline, ""):
+            yield line
+    process.wait()
+    yield process.returncode
+
+
 def run_pipeline_command(domain: str, stage: str, employees: int, days: int, seed: int) -> tuple[int, str]:
     command = [
         sys.executable,
@@ -962,29 +994,60 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Control")
-        domain = st.selectbox("Dominio", ["restaurant", "clinic", "industrial"], index=0)
-        stage = st.selectbox("Stage", ["generate", "etl", "train", "infer", "report", "full"], index=5)
-        default_employees = 72 if domain == "restaurant" else (96 if domain == "clinic" else 200)
+        domain = st.selectbox("Dominio", ["clinic", "restaurant", "industrial"], index=0)
+        stage = st.selectbox("Stage", ["full", "generate", "etl", "train", "infer", "report"], index=0)
+        default_employees = 96 if domain == "clinic" else (72 if domain == "restaurant" else 200)
         employees = st.number_input("Employees", min_value=1, value=default_employees, step=1)
-        days = st.number_input("Days", min_value=1, value=180, step=1)
+        days = st.number_input(
+            "Days (Horizonte)",
+            min_value=7,
+            max_value=365,
+            value=30,
+            step=1,
+            help="30 días sugerido para ejecución rápida en tiempo real (~9s). Usa 180 para histórico semestral completo.",
+        )
         seed = st.number_input("Seed", min_value=0, value=42, step=1)
-        run_clicked = st.button("Ejecutar pipeline", type="primary", width="stretch")
-        refresh_clicked = st.button("Refrescar vista", width="stretch")
+        run_clicked = st.button("🚀 Ejecutar pipeline", type="primary", width="stretch")
+        refresh_clicked = st.button("🔄 Refrescar vista", width="stretch")
 
     artifacts = get_domain_artifacts(domain)
 
     if run_clicked:
-        with st.spinner("Ejecutando pipeline..."):
-            return_code, logs = run_pipeline_command(domain, stage, int(employees), int(days), int(seed))
-        st.session_state["last_logs"] = logs
+        status_box = st.status(f"⚙️ Ejecutando pipeline ({domain} - stage: {stage} - {days} días)...", expanded=True)
+        log_placeholder = status_box.empty()
+        accumulated_logs = []
+        return_code = 0
+
+        for item in run_pipeline_streaming(domain, stage, int(employees), int(days), int(seed)):
+            if isinstance(item, int):
+                return_code = item
+            else:
+                accumulated_logs.append(item)
+                log_placeholder.code("".join(accumulated_logs[-12:]), language="text")
+
+        full_log_str = "".join(accumulated_logs)
+        st.session_state["last_logs"] = full_log_str
         st.session_state["last_return_code"] = return_code
+
         if return_code == 0:
-            st.success("Pipeline ejecutado correctamente.")
+            st.cache_data.clear()
+            status_box.update(
+                label=f"✅ ¡Pipeline de {domain} completado exitosamente ({days} días)!",
+                state="complete",
+                expanded=False,
+            )
+            st.toast("Datos y métricas actualizados en vivo.", icon="✅")
         else:
-            st.error(f"El pipeline terminó con código {return_code}.")
+            status_box.update(
+                label=f"❌ Error en pipeline (código {return_code})",
+                state="error",
+                expanded=True,
+            )
+            st.error(f"El pipeline terminó con código {return_code}. Revisa la pestaña 'Logs' para más detalles.")
 
     if refresh_clicked:
-        st.success("Vista refrescada.")
+        st.cache_data.clear()
+        st.success("Vista y datos refrescados.")
 
     predictions_df = load_predictions(artifacts.predictions_csv)
     metrics_payload = load_metrics_payload(artifacts.metrics_json)

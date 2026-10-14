@@ -56,12 +56,10 @@ def run_from_args(args: argparse.Namespace) -> None:
         logger.info("Dominio seleccionado: %s", pipeline.name)
         logger.info("Descripcion: %s", pipeline.description)
 
-        if args.stage == "train":
-            pipeline.run_train(args)
-        elif args.stage == "infer":
-            pipeline.run_infer(args)
-        else:
+        if args.stage == "full":
             pipeline.run_full(args)
+        else:
+            pipeline.run_stage(args.stage, args)
     except (NotImplementedError, ValueError) as exc:
         logger.error("%s", exc)
         raise SystemExit(2) from exc
