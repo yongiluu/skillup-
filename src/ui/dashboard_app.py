@@ -8,6 +8,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import altair as alt
 import numpy as np
 import pandas as pd
@@ -17,7 +21,6 @@ from config.clinic_settings import CLINIC_CRITICAL_ROLE_TARGETS, CLINIC_MODEL_CO
 from config.restaurant_settings import CRITICAL_ROLE_TARGETS, RESTAURANT_PROCESSED_DIR, RESTAURANT_RAW_DIR
 from config.settings import PROCESSED_DIR, RAW_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 RUNNER_SCRIPT = PROJECT_ROOT / "scripts" / "run_pipeline.py"
 WEEKDAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 

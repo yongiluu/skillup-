@@ -120,6 +120,57 @@
                     </div>
                 </div>
 
+                <!-- 📅 Calendario Práctico de Programación por Área -->
+                <div class="charts-row">
+                    <div class="chart-card flex-1 calendar-card-dark">
+                        <div class="calendar-card-header">
+                            <div class="calendar-title-wrapper">
+                                <h3>📅 Calendario Práctico de Programación por Área</h3>
+                                <i class="fa-solid fa-circle-question tooltip-icon" title="Matriz de programación operativa que proyecta dotación requerida vs asignada y nivel de riesgo por turno"></i>
+                            </div>
+                            <div class="calendar-controls">
+                                <div class="area-selector-group">
+                                    <span class="control-label">ÁREA SELECCIONADA:</span>
+                                    <select id="calendar-area-select" class="dark-dropdown">
+                                        <option value="cracking" selected>Cracking</option>
+                                        <option value="destilacion">Destilación</option>
+                                        <option value="mantenimiento">Mantenimiento</option>
+                                        <option value="almacenamiento">Almacenamiento</option>
+                                        <option value="oficinas">Oficinas</option>
+                                        <option value="all">Todas las áreas (Consolidado)</option>
+                                        <option value="urgencias">Clínica: Urgencias</option>
+                                        <option value="uci">Clínica: UCI Adulto</option>
+                                    </select>
+                                </div>
+                                <div class="calendar-legend">
+                                    <span class="legend-label">Leyenda Cobertura:</span>
+                                    <span class="legend-pill ok"><span class="legend-dot"></span> Cobertura OK</span>
+                                    <span class="legend-pill warning"><span class="legend-dot"></span> Alerta Moderada</span>
+                                    <span class="legend-pill danger"><span class="legend-dot"></span> Déficit Crítico</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Matriz de Programación Scrollable -->
+                        <div class="calendar-table-responsive">
+                            <table class="calendar-grid-table" id="calendar-table">
+                                <!-- Poblado dinámicamente con JS -->
+                            </table>
+                        </div>
+
+                        <!-- Recomendaciones Inteligentes de Reasignación -->
+                        <div class="ai-recs-section">
+                            <div class="ai-recs-title">
+                                <h4>🤖 Recomendaciones Inteligentes de Reasignación (AI Assistant)</h4>
+                                <i class="fa-solid fa-circle-question tooltip-icon" title="Sugerencias predictivas automáticas para redistribución de turnos y mitigación de fatiga"></i>
+                            </div>
+                            <div class="ai-recs-grid" id="ai-recs-cards">
+                                <!-- Poblado dinámicamente según área -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Main Charts Row -->
                 <div class="charts-row">
                     <div class="chart-card flex-2">
@@ -469,6 +520,44 @@
             </div>
         </div>
     </main>
-    <script src="app.js?v=5"></script>
+
+    <!-- Modal Detalle de Turno y Advertencia de Trabajadores -->
+    <div id="shift-detail-modal" class="shift-modal-backdrop" style="display: none;">
+        <div class="shift-modal-content">
+            <div class="shift-modal-header">
+                <div>
+                    <h3 id="modal-shift-title">Cracking - Turno Diurno</h3>
+                    <p id="modal-shift-subtitle" class="modal-subtitle">Viernes, 20 de Febrero • Cobertura: 7/12</p>
+                </div>
+                <button class="shift-modal-close" onclick="closeShiftModal()">&times;</button>
+            </div>
+            <div class="shift-modal-body">
+                <div class="shift-alert-banner danger" id="modal-alert-banner">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div id="modal-alert-text">
+                        <strong>Alerta de Déficit Crítico (94% Riesgo):</strong> Faltan 5 operadores para completar la dotación requerida mínima (12 operadores).
+                    </div>
+                </div>
+
+                <h4 style="margin: 16px 0 10px 0; font-size: 14px; color: #cbd5e1; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-users"></i> Trabajadores Asignados y Advertencias de Fatiga
+                </h4>
+
+                <div class="modal-workers-list" id="modal-workers-list">
+                    <!-- Se inyecta dinámicamente con JS -->
+                </div>
+
+                <div class="modal-ai-action-box">
+                    <div class="ai-action-info">
+                        <strong><i class="fa-solid fa-wand-magic-sparkles"></i> Sugerencia AI Assistant:</strong>
+                        <span id="modal-ai-action-text">Reasignar 2 operadores disponibles desde Almacenamiento y convocar a 1 personal de guardia para mitigar riesgo inmediato.</span>
+                    </div>
+                    <button class="btn-primary" onclick="applyReassignment()"><i class="fa-solid fa-check"></i> Aplicar Reasignación</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js?v=6"></script>
 </body>
 </html>
