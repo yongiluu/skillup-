@@ -1,468 +1,404 @@
-// Manejo de Vistas y Roles
-const urlParams = new URLSearchParams(window.location.search);
-const forcedRole = urlParams.get('role');
-let isManager = (forcedRole === 'manager');
+// mobile-prototype/app.js — SkillUp · Turnos restaurante (móvil)
+// app.html?role=worker  → vista empleado (opcional &emp=RST_005)
+// app.html?role=manager → vista jefe de turno
+// Datos: window.SKILLUP_DATA (data.js, generado por scripts/10_build_restaurant_ui_data.py)
 
-function switchTab(tabName, element) {
-    // Remove active class from all nav items
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-    });
-    // Add active class to clicked item
-    element.classList.add('active');
-    
-    // Ocultar todas las vistas
-    document.querySelectorAll('.view').forEach(view => {
-        view.classList.remove('active');
-        view.style.display = 'none'; // Ensure it is hidden
-    });
-    
-    if (tabName === 'inicio') {
-        document.body.classList.remove('header-hidden');
-        if (isManager) {
-            const el = document.getElementById('view-inicio-manager');
-            el.classList.add('active');
-            el.style.display = 'flex';
-        } else {
-            const el = document.getElementById('view-inicio-worker');
-            el.classList.add('active');
-            el.style.display = 'flex';
-        }
-    } else {
-        document.body.classList.add('header-hidden');
-        const el = document.getElementById(`view-${tabName}`);
-        if (el) {
-            el.classList.add('active');
-            el.style.display = 'flex';
-        }
-    }
+const DATA = window.SKILLUP_DATA;
+const params = new URLSearchParams(window.location.search);
+const IS_MANAGER = params.get('role') === 'manager';
+
+const ROLE_LABELS = {
+    garzon: 'Garzón', host: 'Host', cajero: 'Cajero', cocinero_linea: 'Cocinero de línea',
+    ayudante_cocina: 'Ayudante de cocina', runner: 'Runner', copero: 'Copero', jefe_turno: 'Jefe de turno',
+};
+const CRITICAL_ROLES = ['garzon', 'cocinero_linea', 'jefe_turno'];
+const PERIOD_NAMES = { '11_13': 'Apertura', '13_15': 'Almuerzo', '19_21': 'Cena', '21_23': 'Cierre' };
+const ABSENCE_LABELS = { short_notice_personal: 'Personal, aviso corto', respiratorio: 'Respiratorio' };
+
+const ICONS = {
+    home: '<path d="M3 11l9-7 9 7v9H3z"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    team: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.2 2.5 3.5 5.2"/>',
+    heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',
+    chat: '<path d="M4 5h16v11H8l-4 4z"/>',
+    bell: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/>',
+    back: '<path d="M15 5l-7 7 7 7"/>',
+};
+const icon = (name, size = 22) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+
+// ---------- helpers ----------
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const parseDate = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const toISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const addDays = (iso, n) => { const d = parseDate(iso); d.setDate(d.getDate() + n); return toISO(d); };
+const fmt = (iso, opts) => parseDate(iso).toLocaleDateString('es-CL', opts).replace(',', '').replace('.', '');
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const prob = (p) => (p == null ? '—' : p.toFixed(2).replace('.', ','));
+const roleLabel = (r) => ROLE_LABELS[r] || r;
+const periodLabel = (p) => (DATA.periods[p] || p).replace(/:00/g, '').replace('-', '–');
+const periodStart = (p) => (DATA.periods[p] || p).split('-')[0];
+const periodEnd = (p) => (DATA.periods[p] || p).split('-')[1];
+const daysText = (n) => `${n} ${n === 1 ? 'día seguido' : 'días seguidos'}`;
+const dayName = (iso) => (iso === DATA.demoDate ? 'Hoy' : capitalize(fmt(iso, { weekday: 'short', day: 'numeric' })));
+const shortId = (id) => id.replace('RST_', '');
+
+function level(p) {
+    if (p >= DATA.thresholds.high) return 'high';
+    if (p >= DATA.thresholds.alert) return 'warn';
+    return 'ok';
+}
+const LEVEL_TEXT = { ok: 'Cubierto', warn: 'Alerta', high: 'Riesgo alto' };
+
+function humanizeAction(action) {
+    return String(action || '')
+        .replace(/\b(\d{2})_(\d{2})\b/g, '$1–$2')
+        .replace(/\b([a-z]+_[a-z]+|garzon|host|cajero|runner|copero)\b/g, (m) => (ROLE_LABELS[m] ? ROLE_LABELS[m].toLowerCase() : m));
+}
+function targetRole(action) {
+    const m = /(?:reforzar|backup en|cobertura de)\s+([a-z_]+)/.exec(action || '');
+    return m ? m[1] : null;
+}
+function dayFlags(iso) {
+    const cal = DATA.calendar.find((c) => c.date === iso);
+    const dow = parseDate(iso).getDay();
+    const flags = [];
+    if (cal?.holiday) flags.push('Feriado');
+    if (cal?.payday) flags.push('Día de pago');
+    if (dow === 5) flags.push('Viernes');
+    if (dow === 6) flags.push('Fin de semana');
+    return flags;
+}
+const isWorking = (e, date, period) => e.shifts.some((s) => s.date === date && s.period === period);
+const absentToday = (id) => DATA.absencesToday.some((a) => a.id === id);
+const employee = (id) => DATA.employees.find((e) => e.id === id);
+
+// Quién puede cubrir `role` en ese servicio (mismo rol primero, luego polivalentes).
+function coverCandidates(role, date, period, excludeId) {
+    const allowed = DATA.roleBackups[role] || [];
+    return DATA.employees
+        .filter((e) => e.id !== excludeId)
+        .filter((e) => e.role === role || (e.crossTrained && (allowed.includes(e.role) || e.backupRole === role)))
+        .filter((e) => !isWorking(e, date, period) && !(date === DATA.demoDate && absentToday(e.id)))
+        .sort((a, b) => (a.role === role ? 0 : 1) - (b.role === role ? 0 : 1) || a.consecutiveDays - b.consecutiveDays);
 }
 
-function toggleRole() {
-    isManager = !isManager;
-    
-    // Forzar ir a la pestaña inicio cuando cambian de rol
-    const inicioTab = document.querySelector('.nav-item[onclick*="inicio"]');
-    switchTab('inicio', inicioTab);
-    
-    if(isManager) {
-        setTimeout(initCharts, 100);
-        fetchDataFromAPI();
-    }
+function employeeLevel(e) {
+    const flags = (e.consecutiveDays >= 6 ? 1 : 0) + (e.absences90 >= 4 ? 1 : 0) + (e.bio && e.bio.fatigue >= 60 ? 1 : 0);
+    return flags >= 2 ? 'high' : flags === 1 ? 'warn' : 'ok';
 }
 
-async function fetchDataFromAPI() {
-    if(!isManager) return;
-    
-    try {
-        const predsRes = await fetch('http://localhost:8000/api/v1/predictions');
-        const preds = await predsRes.json();
-        
-        if(preds && !preds.error && preds.length > 0) {
-            // Calculate risk
-            let totalRisk = 0;
-            let criticalUnits = new Set();
-            preds.forEach(p => {
-                totalRisk += p.predicted_deficit_probability;
-                if(p.predicted_has_deficit === 1) {
-                    criticalUnits.add(p.clinical_unit);
-                }
-            });
-            const avgRisk = ((totalRisk / preds.length) * 100).toFixed(1);
-            
-            // Update KPIs
-            const kpiValues = document.querySelectorAll('.manager-content .kpi-value');
-            if(kpiValues.length >= 2) {
-                kpiValues[0].innerText = avgRisk + '%';
-                kpiValues[1].innerText = criticalUnits.size;
-            }
-            
-                // Update staff list on home screen
-                const staffList = document.querySelector('.staff-list:not(#team-list)');
-                if(staffList) {
-                    staffList.innerHTML = '';
-                    preds.slice(0, 3).forEach((p, idx) => {
-                        const pct = (p.predicted_deficit_probability * 100).toFixed(1);
-                        
-                        const isDanger = p.predicted_deficit_probability > 0.7;
-                        const isWarning = p.predicted_deficit_probability > 0.4 && p.predicted_deficit_probability <= 0.7;
-                        const badgeClass = isDanger ? 'danger' : (isWarning ? 'warning' : 'success');
-                        
-                        let role = 'TENS';
-                        if (p.predicted_role_has_deficit_medico === 1) role = 'Médico';
-                        else if (p.predicted_role_has_deficit_enfermera === 1) role = 'Enfermera';
-                        
-                        const unit = p.clinical_unit.replace('_', ' ');
-                        
-                        staffList.innerHTML += `
-                            <div class="staff-item">
-                                <div class="staff-info"><h4>Staff ${idx+1}</h4><p style="text-transform: capitalize;">${role} • ${unit}</p></div>
-                                <div class="staff-status ${badgeClass}">Riesgo: ${pct}%</div>
-                            </div>
-                        `;
-                    });
-                }
-                
-                // Update team list on Equipo tab
-                const teamList = document.getElementById('team-list');
-                if(teamList) {
-                    teamList.innerHTML = '';
-                    preds.slice(0, 10).forEach((p, idx) => { // Mostrar top 10 para el directorio
-                        const pct = (p.predicted_deficit_probability * 100).toFixed(1);
-                        
-                        const isDanger = p.predicted_deficit_probability > 0.7;
-                        const isWarning = p.predicted_deficit_probability > 0.4 && p.predicted_deficit_probability <= 0.7;
-                        const badgeClass = isDanger ? 'danger' : (isWarning ? 'warning' : 'success');
-                        
-                        let role = 'TENS';
-                        if (p.predicted_role_has_deficit_medico === 1) role = 'Médico';
-                        else if (p.predicted_role_has_deficit_enfermera === 1) role = 'Enfermera';
-                        
-                        const unit = p.clinical_unit.replace('_', ' ');
-                        
-                        teamList.innerHTML += `
-                            <div class="staff-item" style="margin-bottom: 10px;">
-                                <div class="staff-info">
-                                    <h4 style="display: flex; align-items: center; gap: 8px;">
-                                        <img src="https://i.pravatar.cc/150?img=${idx+20}" style="width: 24px; height: 24px; border-radius: 50%;"> 
-                                        Trabajador ${idx+1}
-                                    </h4>
-                                    <p style="text-transform: capitalize; margin-top: 5px;">${role} • ${unit}</p>
-                                </div>
-                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
-                                    <div class="staff-status ${badgeClass}">Riesgo: ${pct}%</div>
-                                    <button style="background: transparent; border: none; color: #1e3a8a; font-size: 18px; padding: 5px;"><i class="fa-brands fa-whatsapp"></i></button>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-                
-                // Initialize charts with dynamic data
-                initCharts(preds);
-        }
-    } catch(e) {
-        console.error("Error fetching API", e);
-    }
+// ---------- estado ----------
+const state = {
+    tab: IS_MANAGER ? 'hoy' : 'turnos',
+    covered: {},          // jefe: servicio → id asignado
+    pickedDay: DATA.demoDate,
+    changeReason: 'Estudios / exámenes',
+    changeSentTo: null,
+    offerAnswer: null,
+};
+
+const WORKER = (() => {
+    const fromUrl = params.get('emp') && employee(params.get('emp'));
+    if (fromUrl) return fromUrl;
+    return DATA.employees.find((e) => e.role === 'garzon' && e.shifts.some((s) => s.date === DATA.demoDate) && e.shifts.some((s) => s.date > DATA.demoDate))
+        || DATA.employees[0];
+})();
+
+// ---------- render raíz ----------
+function render() {
+    const screen = document.getElementById('screen');
+    const views = IS_MANAGER
+        ? { hoy: managerToday, semana: managerWeek, equipo: managerTeam }
+        : { turnos: workerShifts, cambio: workerChange, bienestar: workerWellbeing, avisos: workerNotices };
+    screen.innerHTML = views[state.tab]();
+    screen.scrollTop = 0;
+    renderTabbar();
+    bind(screen);
 }
 
-// Inicializar progreso del circulo y eventos
+function renderTabbar() {
+    const tabs = IS_MANAGER
+        ? [['hoy', 'Hoy', 'home'], ['semana', 'Semana', 'calendar'], ['equipo', 'Equipo', 'team']]
+        : [['turnos', 'Turnos', 'calendar'], ['bienestar', 'Bienestar', 'heart'], ['avisos', 'Avisos', 'chat']];
+    const current = state.tab === 'cambio' ? 'turnos' : state.tab;
+    document.getElementById('tabbar').innerHTML = tabs.map(([key, label, ic]) =>
+        `<button class="tab ${current === key ? 'active' : ''}" data-tab="${key}" ${current === key ? 'aria-current="page"' : ''}>${icon(ic)}${label}</button>`).join('');
+    document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; render(); }));
+}
+
+function bind(root) {
+    root.querySelectorAll('[data-go]').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.go; render(); }));
+    root.querySelectorAll('[data-cover]').forEach((b) => b.addEventListener('click', () => {
+        state.covered[b.dataset.cover] = b.dataset.who; render();
+    }));
+    root.querySelectorAll('[data-day]').forEach((b) => b.addEventListener('click', () => { state.pickedDay = b.dataset.day; render(); }));
+    root.querySelectorAll('[data-offer]').forEach((b) => b.addEventListener('click', () => { state.offerAnswer = b.dataset.offer; render(); }));
+    root.querySelectorAll('input[name=motivo]').forEach((r) => r.addEventListener('change', () => { state.changeReason = r.value; }));
+    root.querySelectorAll('[data-send]').forEach((b) => b.addEventListener('click', () => { state.changeSentTo = b.dataset.send; render(); }));
+}
+
+// ---------- JEFE DE TURNO ----------
+function managerToday() {
+    const today = DATA.demoDate;
+    const services = DATA.services.filter((s) => s.date === today);
+    // Más crítico: mayor nivel de riesgo y, dentro del mismo nivel, más personas faltantes.
+    const rank = { high: 2, warn: 1, ok: 0 };
+    const focus = [...services].sort((a, b) => rank[level(b.prob)] - rank[level(a.prob)]
+        || (b.required - b.actual) - (a.required - a.actual) || b.prob - a.prob)[0];
+    const role = targetRole(focus.action) || 'garzon';
+    const gap = Math.max(1, focus.required - focus.actual);
+    const key = `${focus.date}|${focus.period}`;
+    const cands = coverCandidates(role, focus.date, focus.period).slice(0, gap);
+    const flags = dayFlags(today);
+    const atRisk = services.filter((s) => s.prob >= DATA.thresholds.alert).length;
+
+    const rest = services.filter((s) => s !== focus).map((s) => `
+        <div class="list-row">
+            <span class="when">${periodLabel(s.period)}</span>
+            <span class="what">${s.actual >= s.required ? 'Completo' : `Faltan ${s.required - s.actual}`} · ${PERIOD_NAMES[s.period]}</span>
+            <span class="chip ${level(s.prob)}">${prob(s.prob)}</span>
+        </div>`).join('');
+
+    const absences = DATA.absencesToday.map((a) => {
+        const e = employee(a.id);
+        return `<div class="person">
+            <span class="avatar">${shortId(a.id)}</span>
+            <div class="text"><strong>${a.id}</strong><span>${e ? roleLabel(e.role) : ''} · ${esc(ABSENCE_LABELS[a.reason] || a.reason.replace(/_/g, ' '))} · ${String(a.hours).replace('.', ',')} h</span></div>
+            ${a.shortNotice ? '<span class="chip warn">Aviso corto</span>' : ''}
+        </div>`;
+    }).join('') || '<p class="empty">Sin ausencias.</p>';
+
+    const coveredBy = state.covered[key];
+    return `
+        <header class="hero">
+            <div class="hero-top">
+                <span class="hello">Hola, [Jefe de turno]</span>
+                <button class="icon-btn" aria-label="Notificaciones, ${DATA.absencesToday.length} nuevas">${icon('bell', 20)}<span class="badge-dot"></span></button>
+            </div>
+            <h1 class="hero-title">${esc(capitalize(fmt(today, { weekday: 'long', day: 'numeric', month: 'short' })))}</h1>
+            <div class="chips">
+                ${atRisk >= 2 ? '<span class="chip accent">Sobredemanda</span>' : ''}
+                ${flags.map((f) => `<span class="chip ghost">${f}</span>`).join('')}
+            </div>
+        </header>
+        <div class="content">
+            <section class="card" aria-labelledby="focus-h">
+                <div class="card-head">
+                    <h2 id="focus-h" class="card-label">Servicio más crítico</h2>
+                    <span class="chip ${level(focus.prob)}">${LEVEL_TEXT[level(focus.prob)]} · ${prob(focus.prob)}</span>
+                </div>
+                <div class="big">${periodStart(focus.period)} – ${periodEnd(focus.period)}</div>
+                <div class="kv"><span>Dotación</span><strong class="${focus.actual < focus.required ? 'short' : ''}">${focus.actual} / ${focus.required}${focus.actual < focus.required ? ` · faltan ${focus.required - focus.actual}` : ''}</strong></div>
+                ${CRITICAL_ROLES.map((r) => `<div class="kv"><span>${roleLabel(r)}</span><span class="chip ${level(focus.roleProb[r])}">${prob(focus.roleProb[r])}</span></div>`).join('')}
+                <p class="sub" style="margin:0">${esc(humanizeAction(focus.action))}</p>
+                ${coveredBy
+                    ? `<span class="chip ok" style="align-self:flex-start">Avisado a ${esc(coveredBy)}</span>`
+                    : cands.length
+                        ? `<button class="btn primary block" data-cover="${key}" data-who="${cands.map((c) => c.id).join(', ')}">Pedir cobertura de ${roleLabel(role).toLowerCase()}</button>
+                           <p class="sub" style="margin:0;text-align:center">Sugerido: ${cands.map((c) => `${c.id} (${roleLabel(c.role).toLowerCase()})`).join(', ')}</p>`
+                        : '<p class="sub" style="margin:0">Nadie libre para cubrir: ofrecer turno extra.</p>'}
+            </section>
+            <section class="card" aria-labelledby="rest-h" style="gap:0">
+                <h2 id="rest-h" class="card-label" style="margin-bottom:4px">Resto del día</h2>
+                ${rest}
+            </section>
+            <section class="card" aria-labelledby="abs-h" style="gap:0">
+                <h2 id="abs-h" class="card-label" style="margin-bottom:4px">Ausencias de hoy · ${DATA.absencesToday.length}</h2>
+                ${absences}
+            </section>
+        </div>`;
+}
+
+function managerWeek() {
+    const days = Array.from({ length: 7 }, (_, i) => addDays(DATA.weekStart, i));
+    const periods = Object.keys(DATA.periods);
+    return `
+        <header class="plain-head"><span class="hello">Semana</span><h1>${fmt(days[0], { day: 'numeric' })} al ${fmt(days[6], { day: 'numeric', month: 'long' })}</h1></header>
+        <div class="content">
+            <div class="chips">${periods.map((p) => `<span class="chip muted">${periodLabel(p)}</span>`).join('')}</div>
+            ${days.map((d) => {
+                const flags = dayFlags(d);
+                return `<section class="card" aria-label="${esc(fmt(d, { weekday: 'long', day: 'numeric' }))}">
+                    <div class="card-head">
+                        <strong style="font-size:16px">${esc(dayName(d))}</strong>
+                        <div class="chips">${flags.map((f) => `<span class="chip ${f === 'Día de pago' || f === 'Feriado' ? 'accent' : 'ok'}">${f}</span>`).join('')}</div>
+                    </div>
+                    <div class="pills">${periods.map((p) => {
+                        const s = DATA.services.find((x) => x.date === d && x.period === p);
+                        return s ? `<span class="pill ${level(s.prob)}" title="${periodLabel(p)}: ${s.actual}/${s.required}, prob. ${prob(s.prob)}">${s.actual}/${s.required}</span>` : '<span class="pill"></span>';
+                    }).join('')}</div>
+                </section>`;
+            }).join('')}
+            <p class="sub" style="margin:0">Cada bloque: dotación actual / requerida por servicio. Naranjo: alerta ≥ ${prob(DATA.thresholds.alert)} · rojo: alto ≥ ${prob(DATA.thresholds.high)}.</p>
+        </div>`;
+}
+
+function managerTeam() {
+    const watch = DATA.employees
+        .map((e) => ({ e, lv: employeeLevel(e) }))
+        .filter((x) => x.lv !== 'ok')
+        .sort((a, b) => (a.lv === 'high' ? 0 : 1) - (b.lv === 'high' ? 0 : 1) || b.e.consecutiveDays - a.e.consecutiveDays)
+        .slice(0, 10);
+    return `
+        <header class="plain-head"><span class="hello">Equipo · ${DATA.employees.length} personas</span><h1>A quién cuidar</h1></header>
+        <div class="content">
+            <section class="card" style="gap:0">
+                ${watch.map(({ e, lv }) => {
+                    const why = [e.consecutiveDays >= 6 ? daysText(e.consecutiveDays) : null, e.absences90 >= 4 ? `${e.absences90} ausencias en 90 días` : null, e.bio && e.bio.fatigue >= 60 ? 'fatiga alta' : null].filter(Boolean).join(' · ');
+                    return `<div class="person">
+                        <span class="avatar">${shortId(e.id)}</span>
+                        <div class="text"><strong>${e.id} · ${roleLabel(e.role)}</strong><span>${why}</span></div>
+                        <span class="chip ${lv}">${lv === 'high' ? 'Sobrecarga' : 'Atención'}</span>
+                    </div>`;
+                }).join('')}
+            </section>
+            <p class="sub" style="margin:0">Fatiga según datos simulados de reloj; se reemplaza con los relojes reales.</p>
+        </div>`;
+}
+
+// ---------- EMPLEADO ----------
+function workerShifts() {
+    const e = WORKER;
+    const upcoming = e.shifts.filter((s) => s.date >= DATA.demoDate);
+    const next = upcoming[0];
+    const sameDay = next ? upcoming.filter((s) => s.date === next.date) : [];
+    const days = Array.from({ length: 7 }, (_, i) => addDays(DATA.weekStart, i));
+    // Agrupa por servicio: el dataset puede asignar dos roles a la misma persona en un servicio.
+    const picked = Object.values(e.shifts.filter((s) => s.date === state.pickedDay).reduce((acc, s) => {
+        acc[s.period] = acc[s.period] ? { ...acc[s.period], role: `${acc[s.period].role} / ${s.role}` } : { ...s };
+        return acc;
+    }, {}));
+
+    const offerSvc = DATA.services
+        .filter((s) => s.date > DATA.demoDate && s.prob >= DATA.thresholds.alert && targetRole(s.action) === e.role && !isWorking(e, s.date, s.period))
+        .sort((a, b) => b.prob - a.prob)[0];
+
+    return `
+        <header class="plain-head"><span class="hello">Hola, ${e.id} · ${roleLabel(e.role)}</span><h1>Mis turnos</h1></header>
+        <div class="content">
+            ${next ? `<section class="card dark" aria-labelledby="next-h">
+                <h2 id="next-h" class="card-label">Tu próximo turno</h2>
+                <div class="big">${esc(dayName(next.date))} · ${periodStart(next.period)}</div>
+                <div class="sub">${roleLabel(next.role)} · ${[...new Set(sameDay.map((s) => periodLabel(s.period)))].join(', ')}</div>
+                <div class="btn-row" style="margin-top:4px">
+                    <button class="btn accent">Marcar llegada</button>
+                    <button class="btn ghost" data-go="cambio">Pedir cambio</button>
+                </div>
+            </section>` : '<section class="card"><p class="empty">No tienes turnos esta semana.</p></section>'}
+
+            <section class="week" aria-label="Semana">
+                ${days.map((d) => {
+                    const cls = [e.shifts.some((s) => s.date === d) ? 'works' : '', d === DATA.demoDate ? 'today' : '', d === state.pickedDay ? 'picked' : ''].join(' ');
+                    return `<button class="${cls}" data-day="${d}" aria-pressed="${d === state.pickedDay}" aria-label="${esc(fmt(d, { weekday: 'long', day: 'numeric' }))}">
+                        <span class="dow">${fmt(d, { weekday: 'narrow' })}</span><span class="n">${parseDate(d).getDate()}</span><span class="wdot"></span></button>`;
+                }).join('')}
+            </section>
+
+            <section class="card" style="gap:0" aria-labelledby="day-h">
+                <h2 id="day-h" class="card-label" style="margin:4px 0">${esc(capitalize(fmt(state.pickedDay, { weekday: 'long', day: 'numeric', month: 'short' })))}</h2>
+                ${picked.length ? picked.map((s) => `<div class="list-row"><span class="when">${periodLabel(s.period)}</span><span class="what">${PERIOD_NAMES[s.period]}</span><span class="where">${s.role.split(' / ').map(roleLabel).join(' / ')}</span></div>`).join('') : '<div class="list-row"><span class="what">Descanso</span></div>'}
+            </section>
+
+            ${offerSvc ? `<section class="card offer" aria-labelledby="offer-h">
+                <h2 id="offer-h" style="font-size:16px">Turno extra disponible</h2>
+                <div class="sub" style="color:#3A4049">${esc(capitalize(fmt(offerSvc.date, { weekday: 'long', day: 'numeric', month: 'short' })))} · ${periodLabel(offerSvc.period)} · ${roleLabel(e.role)}. ${dayFlags(offerSvc.date).length ? `${dayFlags(offerSvc.date).join(', ')}: ` : ''}se espera alta demanda.</div>
+                ${state.offerAnswer
+                    ? `<span class="chip ${state.offerAnswer === 'si' ? 'ok' : 'muted'}" style="align-self:flex-start">${state.offerAnswer === 'si' ? 'Enviado a tu jefe de turno' : 'Rechazado'}</span>`
+                    : `<div class="btn-row"><button class="btn primary" data-offer="si">Lo tomo</button><button class="btn" data-offer="no">No puedo</button></div>`}
+            </section>` : ''}
+        </div>`;
+}
+
+function changeTarget() {
+    const upcoming = WORKER.shifts.filter((s) => s.date > DATA.demoDate);
+    return upcoming[0] || WORKER.shifts.filter((s) => s.date === DATA.demoDate)[0];
+}
+
+function workerChange() {
+    const shift = changeTarget();
+    const back = `<header class="back-head"><button class="icon-btn" data-go="turnos" aria-label="Volver a Mis turnos">${icon('back', 20)}</button><h1>Pedir cambio</h1></header>`;
+    if (!shift) return `${back}<div class="content"><p class="empty">No tienes turnos para cambiar.</p></div>`;
+    const svc = DATA.services.find((s) => s.date === shift.date && s.period === shift.period);
+    const cands = coverCandidates(shift.role, shift.date, shift.period, WORKER.id).slice(0, 3);
+    const reasons = ['Estudios / exámenes', 'Salud', 'Personal'];
+
+    if (state.changeSentTo) {
+        return `${back}<div class="content">
+            <section class="card"><span class="chip ok" style="align-self:flex-start">Solicitud enviada</span>
+                <div class="big" style="font-size:24px">${esc(state.changeSentTo)} recibió tu pedido</div>
+                <p class="sub" style="margin:0">Motivo: ${esc(state.changeReason)}. Tu jefe de turno debe aprobar el cambio; te avisaremos en Avisos.</p>
+                <button class="btn primary block" data-go="turnos">Volver a mis turnos</button>
+            </section></div>`;
+    }
+    return `${back}
+        <div class="content">
+            <section class="card" style="gap:4px">
+                <span class="card-label">Turno a cambiar</span>
+                <div class="big" style="font-size:22px">${esc(capitalize(fmt(shift.date, { weekday: 'short', day: 'numeric', month: 'short' })))} · ${periodStart(shift.period)} – ${periodEnd(shift.period)}</div>
+                <span class="sub">${roleLabel(shift.role)} · ${PERIOD_NAMES[shift.period]}</span>
+            </section>
+            <fieldset class="card" style="gap:0">
+                <legend class="card-label" style="float:left;width:100%">Motivo</legend>
+                ${reasons.map((r) => `<label class="radio"><input type="radio" name="motivo" value="${r}" ${state.changeReason === r ? 'checked' : ''}>${r}</label>`).join('')}
+            </fieldset>
+            <section class="card" style="gap:0" aria-labelledby="who-h">
+                <h2 id="who-h" class="card-label" style="margin-bottom:4px">Quién puede cubrirte</h2>
+                ${cands.length ? cands.map((c, i) => `<div class="person">
+                    <span class="avatar">${shortId(c.id)}</span>
+                    <div class="text"><strong>${c.id}</strong><span>Libre ese servicio · ${c.role === shift.role ? 'mismo rol' : `${roleLabel(c.role).toLowerCase()} polivalente`} · ${daysText(c.consecutiveDays)}</span></div>
+                    ${i === 0 ? '<span class="chip ok">Mejor opción</span>' : ''}
+                </div>`).join('') : '<p class="empty">Nadie libre en ese servicio.</p>'}
+            </section>
+            ${svc && svc.prob >= DATA.thresholds.alert ? `<div class="notice">Ese servicio ya está en ${level(svc.prob) === 'high' ? 'riesgo alto' : 'alerta'} (${prob(svc.prob)}). Tu jefe de turno debe aprobar el cambio.</div>` : ''}
+        </div>
+        ${cands.length ? `<div class="sticky-bottom"><button class="btn primary block" data-send="${cands[0].id}">Enviar a ${cands[0].id}</button></div>` : ''}`;
+}
+
+function workerWellbeing() {
+    const b = WORKER.bio;
+    return `
+        <header class="plain-head"><span class="hello">${WORKER.id}</span><h1>Bienestar</h1></header>
+        <div class="content">
+            <section class="card pending">
+                <div class="card-head"><h2 style="font-size:16px">Reloj inteligente</h2><span class="chip muted">Datos simulados</span></div>
+                ${b ? `<div class="bio">
+                    <div class="stat">Sueño<strong>${String(b.sleep).replace('.', ',')} h</strong></div>
+                    <div class="stat">Pasos<strong>${b.steps.toLocaleString('es-CL')}</strong></div>
+                    <div class="stat">FC media<strong>${b.hr}</strong></div>
+                </div>` : '<p class="empty">Sin datos.</p>'}
+                <p class="sub" style="margin:0">Cuando lleguen los relojes verás tus datos reales. Solo tú y el equipo de bienestar los ven en detalle.</p>
+            </section>
+            <section class="card pending">
+                <div class="card-head"><h2 style="font-size:16px">Test psicológico</h2><span class="chip muted">Pendiente</span></div>
+                <p class="sub" style="margin:0">Un cuestionario corto sobre estrés y carga percibida. Tu jefe de turno solo ve un nivel agregado, nunca tus respuestas.</p>
+                <button class="btn block" disabled>Disponible pronto</button>
+            </section>
+            <section class="card">
+                <div class="kv"><span>Días seguidos trabajados</span><strong>${WORKER.consecutiveDays}</strong></div>
+                <div class="kv"><span>Horas extra (7 días)</span><strong>${String(WORKER.overtimeWeek).replace('.', ',')} h</strong></div>
+            </section>
+        </div>`;
+}
+
+function workerNotices() {
+    const items = [];
+    if (state.changeSentTo) items.push(['Cambio de turno', `Pedido enviado a ${state.changeSentTo}. Esperando aprobación.`]);
+    if (state.offerAnswer === 'si') items.push(['Turno extra', 'Tu jefe de turno revisará tu solicitud.']);
+    DATA.peaks.slice(0, 3).forEach((p) => items.push([capitalize(fmt(p.date, { weekday: 'long', day: 'numeric', month: 'short' })), `Alta demanda prevista: ${p.reasons.join(', ').toLowerCase()}.`]));
+    return `
+        <header class="plain-head"><span class="hello">${WORKER.id}</span><h1>Avisos</h1></header>
+        <div class="content">
+            <section class="card" style="gap:0">
+                ${items.map(([t, d]) => `<div class="person"><div class="text"><strong>${esc(t)}</strong><span>${esc(d)}</span></div></div>`).join('')}
+            </section>
+        </div>`;
+}
+
+// ---------- init ----------
 document.addEventListener('DOMContentLoaded', () => {
-    // Evento de scroll para ocultar header animado
-    document.querySelectorAll('.content').forEach(content => {
-        content.addEventListener('scroll', () => {
-            const activeNav = document.querySelector('.nav-item.active');
-            // Solo aplicamos la animacion de scroll en la vista de inicio
-            if (activeNav && activeNav.getAttribute('onclick').includes('inicio')) {
-                if (content.scrollTop > 40) {
-                    document.body.classList.add('header-hidden');
-                } else {
-                    document.body.classList.remove('header-hidden');
-                }
-            }
-        });
-    });
-
-    // Sync UI with forced role if any
-    const toggleCheckbox = document.getElementById('role-toggle');
-    if (toggleCheckbox) {
-        toggleCheckbox.checked = isManager;
+    if (!DATA) {
+        document.getElementById('screen').innerHTML = '<p class="empty" style="padding:20px">Falta data.js. Ejecuta: python scripts/10_build_restaurant_ui_data.py</p>';
+        return;
     }
-    
-    if (forcedRole) {
-        const toggleContainer = document.getElementById('role-toggle-container');
-        if (toggleContainer) {
-            toggleContainer.style.display = 'none';
-        }
-    }
-
-    if (isManager) {
-        document.body.classList.remove('worker-mode');
-        document.body.classList.add('manager-mode');
-        
-        const titleEl = document.getElementById('global-header-title');
-        if (titleEl) titleEl.innerText = 'Dashboard Clínica';
-        
-        document.querySelectorAll('.nav-worker-only').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.nav-manager-only').forEach(el => el.style.display = 'flex');
-    } else {
-        document.querySelectorAll('.nav-worker-only').forEach(el => el.style.display = 'flex');
-        document.querySelectorAll('.nav-manager-only').forEach(el => el.style.display = 'none');
-    }
-
-    // Forzar la vista correcta al cargar
-    const inicioTab = document.querySelector('.nav-item[onclick*="inicio"]');
-    if (inicioTab) {
-        switchTab('inicio', inicioTab);
-    }
-    
-    if (isManager) {
-        fetchDataFromAPI();
-    }
-    
-    try {
-        const circle = document.querySelector('.progress-ring__circle');
-        if(circle) {
-            // Usamos 110 estatico por si el SVG falla al leer baseVal oculto
-            const radius = 110; 
-            const circumference = radius * 2 * Math.PI;
-            circle.style.strokeDasharray = `${circumference} ${circumference}`;
-            
-            // 82% aptitud (100 - 82 = 18% offset)
-            const offset = circumference - (82 / 100) * circumference;
-            
-            // Animar la barra al cargar
-            setTimeout(() => {
-                circle.style.strokeDashoffset = offset;
-            }, 100);
-        }
-    } catch(e) {
-        console.error("Error animando circulo:", e);
-    }
-    
-    // Iniciar chart de salud
-    const ctxHealth = document.getElementById('health-chart');
-    if (ctxHealth) {
-        new Chart(ctxHealth.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
-                datasets: [{
-                    data: [5, 6, 7, 5, 8, 6, 8],
-                    borderColor: '#00acc1',
-                    tension: 0,
-                    fill: false,
-                    pointBackgroundColor: '#00acc1',
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { min: 0, max: 10, ticks: { stepSize: 2 } }, 
-                    x: { grid: { display: false } } 
-                }
-            }
-        });
-    }
-    // Initialize Interactive Circular Slider in Worker View
-    // Initialize Interactive Circular Slider in Worker View
-    const progressContainer = document.getElementById('interactive-progress');
-    if (progressContainer) {
-        const circle = document.getElementById('progress-circle');
-        const thumb = document.getElementById('progress-thumb');
-        const valText = document.getElementById('progress-value');
-        const labelText = document.getElementById('progress-label');
-        const msg1 = document.getElementById('status-message-1');
-        const msg2 = document.getElementById('status-message-2');
-        
-        let isDragging = false;
-        const radius = 110;
-        const circumference = radius * 2 * Math.PI; // ~691
-
-        function updateProgress(value) {
-            if (value > 100) value = 100;
-            if (value < 0) value = 0;
-            
-            // Calculate angle from value (0 to 100 -> 0 to 2PI)
-            const theta = (value / 100) * (2 * Math.PI);
-            
-            // Calculate thumb position
-            const thumbX = 130 + radius * Math.sin(theta);
-            const thumbY = 130 - radius * Math.cos(theta);
-            
-            thumb.style.left = `${thumbX - 17}px`;
-            thumb.style.top = `${thumbY - 17}px`;
-            
-            // Update offset
-            const offset = circumference - (value / 100) * circumference;
-            circle.style.strokeDashoffset = offset;
-            
-            // Update colors and text
-            valText.innerText = value;
-            let color = '#10b981'; // Green
-            let label = 'ÓPTIMO';
-            let m1 = 'Tu riesgo predicho de fatiga es bajo.';
-            let m2 = 'Estás asignado a zonas de alta demanda sin restricciones.';
-            
-            if (value < 30) {
-                color = '#ef4444'; // Red
-                label = 'FATIGA ALTA';
-                m1 = 'Alerta: Nivel de fatiga crítico.';
-                m2 = 'Se requiere descanso obligatorio o reasignación a tareas de bajo riesgo.';
-            } else if (value < 50) {
-                color = '#f59e0b'; // Orange
-                label = 'OBSERVACIÓN';
-                m1 = 'Precaución: Riesgo de fatiga moderado.';
-                m2 = 'No estás apto para áreas críticas (Ej. UCI, Urgencias).';
-            } else {
-                color = '#10b981'; // Green
-                label = 'ÓPTIMO';
-                m1 = 'Tu riesgo predicho de fatiga es bajo.';
-                m2 = 'Estás asignado a zonas de alta demanda sin restricciones.';
-            }
-            
-            circle.style.stroke = color;
-            thumb.style.borderColor = color;
-            labelText.style.color = color;
-            labelText.innerText = label;
-            
-            if (msg1) msg1.innerText = m1;
-            if (msg2) msg2.innerText = m2;
-        }
-
-        function handlePointerMove(clientX, clientY) {
-            const rect = progressContainer.getBoundingClientRect();
-            const centerX = rect.left + 130;
-            const centerY = rect.top + 130;
-            
-            const dx = clientX - centerX;
-            const dy = clientY - centerY;
-            const angle = Math.atan2(dy, dx); // from -PI to PI
-            
-            // Normalize so 0 is at top (12 o'clock) and goes clockwise
-            let theta = angle + Math.PI / 2;
-            if (theta < 0) theta += 2 * Math.PI;
-            
-            let value = Math.round((theta / (2 * Math.PI)) * 100);
-            updateProgress(value);
-        }
-
-        progressContainer.addEventListener('pointerdown', (e) => {
-            isDragging = true;
-            progressContainer.style.cursor = 'grabbing';
-            handlePointerMove(e.clientX, e.clientY);
-            thumb.style.transform = 'scale(1.2)';
-        });
-
-        window.addEventListener('pointermove', (e) => {
-            if (isDragging) {
-                handlePointerMove(e.clientX, e.clientY);
-            }
-        });
-
-        window.addEventListener('pointerup', () => {
-            isDragging = false;
-            if(progressContainer) progressContainer.style.cursor = 'grab';
-            thumb.style.transform = 'scale(1)';
-        });
-        
-        // Initialize at 82%
-        setTimeout(() => updateProgress(82), 50);
-    }
+    render();
 });
-
-let chartsInitialized = false;
-let globalCharts = {};
-
-function initCharts(preds = []) {
-    if (chartsInitialized && !preds.length) return;
-    
-    // Gráfico 1: Impacto de Factores (Simulando SHAP)
-    const ctxFactors = document.getElementById('chart-factors').getContext('2d');
-    if(globalCharts['factors']) globalCharts['factors'].destroy();
-    globalCharts['factors'] = new Chart(ctxFactors, {
-        type: 'bar',
-        data: {
-            labels: ['Personal Flotante', 'Déficit Previo', 'Carga Asistencial', 'Eficiencia Sueño'],
-            datasets: [{
-                data: [0.8, 0.65, 0.45, -0.3],
-                backgroundColor: ['#1e3a8a', '#3b82f6', '#93c5fd', '#ef4444'],
-                borderRadius: 4
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { display: false, max: 1 }, y: { grid: { display: false } } }
-        }
-    });
-
-    // Gráfico 2: Riesgo por Unidad (Heatmap simulado con Bar)
-    let unitLabels = ['Ambulatoria', 'Toma Muestras', 'Imagenología', 'Consulta Gen.'];
-    let unitData = [98, 75, 45, 12];
-    
-    if (preds.length > 0) {
-        let unitRisk = {};
-        preds.forEach(p => {
-            if (!unitRisk[p.clinical_unit]) unitRisk[p.clinical_unit] = { risk: 0, count: 0 };
-            unitRisk[p.clinical_unit].risk += p.predicted_deficit_probability;
-            unitRisk[p.clinical_unit].count += 1;
-        });
-        
-        // Sort units by risk descending, take top 4
-        let sortedUnits = Object.keys(unitRisk)
-            .map(u => ({ unit: u, avg: (unitRisk[u].risk / unitRisk[u].count) * 100 }))
-            .sort((a, b) => b.avg - a.avg)
-            .slice(0, 4);
-            
-        unitLabels = sortedUnits.map(u => u.unit.replace('_', ' '));
-        unitData = sortedUnits.map(u => u.avg);
-    }
-    
-    const ctxUnits = document.getElementById('chart-units').getContext('2d');
-    if(globalCharts['units']) globalCharts['units'].destroy();
-    globalCharts['units'] = new Chart(ctxUnits, {
-        type: 'bar',
-        data: {
-            labels: unitLabels,
-            datasets: [{
-                data: unitData,
-                backgroundColor: ['#7f1d1d', '#b91c1c', '#f87171', '#fef08a'],
-                borderRadius: 4
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { display: false, max: 100 }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } }
-        }
-    });
-
-    // Gráfico 3: Tendencia
-    let trendLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    let trendData = [2, 1, 4, 10, 15, 8, 3];
-    
-    if (preds.length > 0) {
-        let dateRisk = {};
-        preds.forEach(p => {
-            if (!dateRisk[p.date]) dateRisk[p.date] = { risk: 0, count: 0 };
-            dateRisk[p.date].risk += p.predicted_deficit_probability;
-            dateRisk[p.date].count += 1;
-        });
-        
-        let sortedDates = Object.keys(dateRisk).sort().slice(-7);
-        trendLabels = sortedDates.map(d => d.substring(5)); // MM-DD
-        trendData = sortedDates.map(d => (dateRisk[d].risk / dateRisk[d].count) * 100);
-    }
-
-    const ctxTrend = document.getElementById('chart-trend').getContext('2d');
-    if(globalCharts['trend']) globalCharts['trend'].destroy();
-    globalCharts['trend'] = new Chart(ctxTrend, {
-        type: 'line',
-        data: {
-            labels: trendLabels,
-            datasets: [{
-                data: trendData,
-                borderColor: '#ef4444',
-                tension: 0.4,
-                fill: true,
-                backgroundColor: 'rgba(239, 68, 68, 0.2)'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { display: false, max: 100 }, x: { grid: { display: false } } }
-        }
-    });
-
-    chartsInitialized = true;
-}
