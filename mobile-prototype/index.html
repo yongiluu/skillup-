@@ -3,57 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkillUp - Vista Doble</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <title>SkillUp · Vista doble móvil</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Figtree:wght@500;600&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Nunito', sans-serif;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background-color: #f0f4f8;
+            background: #DCE1E8;
+            font-family: 'Figtree', system-ui, sans-serif;
+            color: #15171C;
             display: flex;
             justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .container {
-            display: flex;
-            gap: 50px;
             align-items: flex-start;
+            min-height: 100vh;
+            padding: 24px 16px;
         }
-        .prototype-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-        .prototype-wrapper h2 {
-            color: #476a7b;
-            font-size: 20px;
-        }
+        .container { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
+        .prototype-wrapper { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+        .prototype-wrapper h2 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; color: #1D3A5F; }
+        .prototype-wrapper p { font-size: 14px; color: #5A606B; }
         iframe {
-            width: 430px;
-            height: 900px;
-            border: none;
-            border-radius: 40px;
-            background-color: #f0f4f8;
+            width: 390px;
+            max-width: calc(100vw - 32px);
+            height: 844px;
+            border: 10px solid #15171C;
+            border-radius: 44px;
+            background: #EEF0F3;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Prototipo Trabajador -->
         <div class="prototype-wrapper">
-            <iframe src="app.html?role=worker" title="Trabajador"></iframe>
+            <h2>Empleado</h2>
+            <p>Mis turnos, cambios y bienestar</p>
+            <iframe src="app.html?role=worker" title="SkillUp móvil · Empleado"></iframe>
         </div>
-
-        <!-- Prototipo Gerente -->
         <div class="prototype-wrapper">
-            <iframe src="app.html?role=manager" title="Gerente"></iframe>
+            <h2>Jefe de turno</h2>
+            <p>Cobertura del día y de la semana</p>
+            <iframe src="app.html?role=manager" title="SkillUp móvil · Jefe de turno"></iframe>
         </div>
     </div>
 </body>
